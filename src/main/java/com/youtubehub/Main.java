@@ -7,6 +7,7 @@ import com.youtubehub.model.Video;
 import com.youtubehub.service.PodcastService;
 import com.youtubehub.service.SubscriptionService;
 import com.youtubehub.storage.ChannelRepository;
+import com.youtubehub.storage.WatchedRepository;
 
 import java.util.List;
 
@@ -21,9 +22,12 @@ public class Main {
             ChannelRepository channelRepository = new ChannelRepository();
             channelRepository.initialize();
 
-            // TEST: build the podcast feed from every saved podcast channel
-            PodcastService podcastService = new PodcastService(channelRepository, client);
-            List<Video> feed = podcastService.getPodcastFeed(5);
+            WatchedRepository watchedRepository = new WatchedRepository();
+            watchedRepository.initialize();
+
+            // TEST: build the podcast feed from every saved podcast channel (true = hide watched)
+            PodcastService podcastService = new PodcastService(channelRepository, watchedRepository, client);
+            List<Video> feed = podcastService.getPodcastFeed(5, true);
 
             System.out.println("Podcast feed (" + feed.size() + " videos):");
             for (Video video : feed) {
@@ -31,8 +35,8 @@ public class Main {
             }
 
             // TEST: build the subscription feed (24 = each priority point is worth one day of freshness)
-            SubscriptionService subscriptionService = new SubscriptionService(channelRepository, client, 24);
-            List<ScoredVideo> subFeed = subscriptionService.getSubscriptionFeed(3);
+            SubscriptionService subscriptionService = new SubscriptionService(channelRepository, watchedRepository, client, 24);
+            List<ScoredVideo> subFeed = subscriptionService.getSubscriptionFeed(3, true);
 
             System.out.println();
             System.out.println("Subscription feed (" + subFeed.size() + " videos):");

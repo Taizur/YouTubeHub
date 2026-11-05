@@ -5,6 +5,7 @@ import com.youtubehub.model.Channel;
 import com.youtubehub.model.ScoredVideo;
 import com.youtubehub.model.Video;
 import com.youtubehub.storage.ChannelRepository;
+import com.youtubehub.storage.WatchedRepository;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 // Builds the subscription feed: recent uploads from every non-podcast channel,
 // ranked by a mix of channel priority and how new the video is.
@@ -30,17 +32,22 @@ import java.util.List;
 // Bigger hoursPerPriorityPoint = priority matters more. 0 = pure newest-first.
 public class SubscriptionService {
     private final ChannelRepository channelRepository;
+    private final WatchedRepository watchedRepository;
     private final YouTubeClient client;
     private final double hoursPerPriorityPoint;
 
-    public SubscriptionService(ChannelRepository channelRepository, YouTubeClient client, double hoursPerPriorityPoint) {
+    public SubscriptionService(ChannelRepository channelRepository, WatchedRepository watchedRepository,
+                               YouTubeClient client, double hoursPerPriorityPoint) {
         this.channelRepository = channelRepository;
+        this.watchedRepository = watchedRepository;
         this.client = client;
         this.hoursPerPriorityPoint = hoursPerPriorityPoint;
     }
 
-    public List<ScoredVideo> getSubscriptionFeed(int videosPerChannel) throws SQLException, IOException, InterruptedException {
+    // hideWatched = skip videos you've already watched (each channel still fills up to videosPerChannel)
+    public List<ScoredVideo> getSubscriptionFeed(int videosPerChannel, boolean hideWatched) throws SQLException, IOException, InterruptedException {
         List<Channel> channels = channelRepository.getAllChannels();
+        Set<String> watchedIds = watchedRepository.getWatchedIds();
         List<ScoredVideo> feed = new ArrayList<>();
         Instant now = Instant.now();
 
@@ -49,7 +56,9 @@ public class SubscriptionService {
                 continue; // podcasts have their own feed
             }
 
-            List<Video> channelVideos = client.getVideosFromPlaylist(channel.getUploadsPlaylistId(), videosPerChannel);
+            // Ask for the full batch (50), then pick the newest ones you haven't watched
+            List<Video> recent = client.getVideosFromPlaylist(channel.getUploadsPlaylistId(), 50);
+            List<Video> channelVideos = FeedFilter.newest(recent, videosPerChannel, hideWatched, watchedIds);
             for (Video video : channelVideos) {
                 Instant published = video.getPublishedInstant();
                 if (published == null) {
