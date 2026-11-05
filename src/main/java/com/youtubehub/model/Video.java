@@ -1,5 +1,7 @@
 package com.youtubehub.model;
 
+import java.time.Instant;
+
 public class Video {
     private String videoId;
     private String videoTitle;
@@ -29,5 +31,15 @@ public class Video {
     }
     public String getPublishedAt() {
         return publishedAt;
+    }
+
+    // The upload time as an Instant (an exact moment in time) so you can do math with it,
+    // like "how many hours ago was this?". Returns null if YouTube didn't give a date
+    // (happens with private or deleted videos in a playlist).
+    public Instant getPublishedInstant() {
+        if (publishedAt == null || publishedAt.isBlank()) {
+            return null;
+        }
+        return Instant.parse(publishedAt);
     }
 }

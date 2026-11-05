@@ -11,7 +11,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class YouTubeClient {
     private static final String BASE_URL = "https://www.googleapis.com/youtube/v3";
@@ -120,8 +122,13 @@ public class YouTubeClient {
         return getVideosFromPlaylist(playlistId, maxResults);
     }
 
+    // How many recent uploads to look through. Costs the same 1 quota unit whether it's 5 or 50,
+    // and a bigger batch leaves room to skip streams and still have enough videos.
+    private static final int UPLOADS_TO_SCAN = 50;
+
+    // Returns up to maxResults of the newest videos in the playlist, never including streams.
     public List<Video> getVideosFromPlaylist(String playlistId, int maxResults) throws IOException, InterruptedException {
-        String json = getPlaylistItemsJson(playlistId, maxResults);
+        String json = getPlaylistItemsJson(playlistId, UPLOADS_TO_SCAN);
         JsonNode root = mapper.readTree(json);
         JsonNode items = root.path("items");
 
@@ -142,6 +149,40 @@ public class YouTubeClient {
                     contentDetails.path("videoPublishedAt").asText()
             ));
         }
+
+        // Never show live streams or stream VODs: drop any video YouTube says was a stream.
+        Set<String> streamIds = findStreamIds(videos);
+        videos.removeIf(video -> streamIds.contains(video.getVideoId()));
+
+        // Keep only the newest maxResults (the playlist is already newest first)
+        if (videos.size() > maxResults) {
+            return new ArrayList<>(videos.subList(0, maxResults));
+        }
         return videos;
+    }
+
+    // Asks YouTube which of these videos are (or were) live streams, all in one request (1 quota unit, max 50 videos).
+    // Streams come back with a "liveStreamingDetails" section; normal uploads don't have one.
+    // Returns the IDs of the streams.
+    private Set<String> findStreamIds(List<Video> videos) throws IOException, InterruptedException {
+        Set<String> streamIds = new HashSet<>();
+        if (videos.isEmpty()) {
+            return streamIds;
+        }
+
+        List<String> ids = new ArrayList<>();
+        for (Video video : videos) {
+            ids.add(video.getVideoId());
+        }
+
+        String json = get("/videos?part=liveStreamingDetails&id=" + String.join(",", ids));
+        JsonNode items = mapper.readTree(json).path("items");
+
+        for (JsonNode item : items) {
+            if (item.has("liveStreamingDetails")) {
+                streamIds.add(item.path("id").asText());
+            }
+        }
+        return streamIds;
     }
 }
