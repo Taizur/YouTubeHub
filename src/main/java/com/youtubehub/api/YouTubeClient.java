@@ -9,6 +9,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
 
 public class YouTubeClient {
     private static final String BASE_URL = "https://www.googleapis.com/youtube/v3";
@@ -77,5 +79,39 @@ public class YouTubeClient {
         JsonNode item = items.get(0);
         return item.path("contentDetails").path("relatedPlaylists").path("uploads").asText();
 
+    }
+
+    public String getPlaylistItemsJson(String playlistId) throws IOException, InterruptedException {
+        return get("/playlistItems?part=snippet,contentDetails&playlistId=" + playlistId + "&maxResults=10");
+    }
+
+    public List<Video> getRecentUploads(String channelId) throws IOException, InterruptedException {
+        String playlistId = getUploadsPlaylistId(channelId);
+        if (playlistId == null) {
+            return new ArrayList<>();
+        }
+
+        String json = getPlaylistItemsJson(playlistId);
+        JsonNode root = mapper.readTree(json);
+        JsonNode items = root.path("items");
+
+        if (items.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        ArrayList<Video> videos = new ArrayList<>();
+
+        for  (JsonNode item : items) {
+            JsonNode snippet = item.path("snippet");
+            JsonNode contentDetails = item.path("contentDetails");
+            videos.add(new Video(
+                    contentDetails.path("videoId").asText(),
+                    snippet.path("title").asText(),
+                    snippet.path("channelId").asText(),
+                    snippet.path("channelTitle").asText(),
+                    contentDetails.path("videoPublishedAt").asText()
+            ));
+        }
+        return videos;
     }
 }

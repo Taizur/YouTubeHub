@@ -4,6 +4,9 @@ import com.youtubehub.api.YouTubeClient;
 import com.youtubehub.config.AppConfig;
 import com.youtubehub.model.Video;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Main {
     public static void main(String[] args) {
         try {
@@ -14,6 +17,13 @@ public class Main {
             YouTubeClient client = new YouTubeClient(appConfig.getApiKey());
             Video testVideo = client.getVideo("d9y30vB88zg");
             System.out.println(client.getUploadsPlaylistId("UCzQUP1qoWDoEbmsQxvdjxgQ"));
+            List<Video> videos = new ArrayList<>(client.getRecentUploads("UCzQUP1qoWDoEbmsQxvdjxgQ"));
+            for  (Video video : videos) {
+                System.out.println(video.getVideoTitle());
+            }
+
+
+
 
         }
         catch (Exception e) {
