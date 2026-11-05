@@ -39,6 +39,27 @@
             <version>3.53.2.0</version>
         </dependency>
 
+        <!-- JavaFX (desktop UI). 21.x matches the project's Java 21 -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>21.0.13</version>
+        </dependency>
+
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Lets you start the app with: mvn javafx:run -->
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>com.youtubehub.ui.YouTubeHubApp</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

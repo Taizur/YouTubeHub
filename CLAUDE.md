@@ -19,7 +19,7 @@ Other planned features:
 - YouTube Data API v3 via **plain `java.net.http.HttpClient`** (not Google's client library, even though it's in the pom — chosen so the requests/JSON are visible and understandable)
 - **Jackson** (`jackson-databind`) using the tree model: `readTree` → `.path()` → `.get(i)` → `.asText()`
 - **SQLite** via `org.xerial:sqlite-jdbc`, plain JDBC with prepared statements
-- Future: JavaFX
+- JavaFX 21.0.13 (`javafx-controls`) + `javafx-maven-plugin` 0.0.8
 
 ## Auth decision
 
@@ -41,13 +41,16 @@ Using an **API key only** (public data), no OAuth for now. OAuth would only be n
 
 | File | Status / purpose |
 |---|---|
+| `Launcher.java` | **Starts the real app.** `main` calls `Application.launch(YouTubeHubApp.class)` (running a class that extends `Application` directly from IntelliJ fails with "JavaFX runtime components are missing"). Also `mvn javafx:run`. |
+| `ui/YouTubeHubApp.java` | JavaFX `Application`. `TabPane` with Podcasts and Subscriptions tabs, each a `ListView<Video>` (cell shows title + "channel · 3h ago"), status `Label` at the bottom of a `BorderPane`. Feeds load on launch on a background daemon `Thread`, results applied with `Platform.runLater`. Double-click → `VideoOpener.open` + remove from list (no API call). Errors show an `Alert`. Feed sizes/weight are constants at the top for now. The harmless "Unsupported JavaFX configuration: classes were loaded from 'unnamed module'" warning comes from running on the classpath. |
 | `Main.java` | Test bench only. Currently loads config, initializes the DB, builds the podcast feed and prints it. |
 | `config/AppConfig.java` | Loads `config.properties` with `Properties`; `load()`, `getApiKey()`, `getOperaPath()` (`opera.path`, currently `C:/Users/brand/AppData/Local/Programs/Opera GX/opera.exe`). |
-| `api/YouTubeClient.java` | Talks to YouTube. Private `get(endpointAndQuery)` helper adds base URL + key, sends request, throws `IOException` on non-200. Methods: `getVideoJson(id)`, `getVideo(id)` → `Video`, `getUploadsPlaylistId(channelId)` → `UU...` or null, `getPlaylistItemsJson(playlistId, maxResults)` (clamped to 1–50, the API limit), `getRecentUploads(channelId, maxResults)` → `List<Video>`, `getVideosFromPlaylist(playlistId, maxResults)` → `List<Video>`, **always drops live streams/VODs** (private `findStreamIds` does one `videos?part=liveStreamingDetails` call, 1 unit; a video with a `liveStreamingDetails` section is a stream). Brandon never wants VODs shown. It scans the newest 50 uploads (`UPLOADS_TO_SCAN`, same 1 unit), drops streams, then keeps the newest `maxResults`. Subscription feed uses 3 per channel, podcasts 5. |
+| `api/YouTubeClient.java` | Talks to YouTube. Private `get(endpointAndQuery)` helper adds base URL + key, sends request, throws `IOException` on non-200. Methods: `getVideoJson(id)`, `getVideo(id)` → `Video`, `getUploadsPlaylistId(channelId)` → `UU...` or null, `getPlaylistItemsJson(playlistId, maxResults)` (clamped to 1–50, the API limit), `getRecentUploads(channelId, maxResults)` → `List<Video>`, `getVideosFromPlaylist(playlistId, maxResults)` → `List<Video>`, **always drops live streams/VODs and Shorts** (private `findStreamsAndShorts` does one `videos?part=contentDetails,liveStreamingDetails` call, 1 unit: a `liveStreamingDetails` section = stream; `contentDetails.duration` <= `SHORTS_MAX_SECONDS` (180) = Short, since the API has no Short flag). Brandon never wants VODs or Shorts shown. It scans the newest 50 uploads (`UPLOADS_TO_SCAN`, same 1 unit), drops streams, then keeps the newest `maxResults`. Subscription feed uses 3 per channel, podcasts 5. |
 | `model/Video.java` | `videoId`, `videoTitle`, `channelID`, `channelTitle`, `publishedAt` (all Strings; publishedAt is ISO-8601 like `2026-10-29T17:00:32Z`). Getters, plus `getPublishedInstant()` → `Instant` or null if blank. |
 | `model/Channel.java` | `channelId`, `channelTitle`, `uploadsPlaylistId`, `priority` (int), `podcast` (boolean). Getters + `setPriority`, `setPodcast`. |
 | `storage/ChannelRepository.java` | SQLite `channels` table. `initialize()`, `addChannel` (upsert), `getAllChannels`, `removeChannel`, `updatePriority`, `updatePodcast`. |
-| `service/ChannelService.java` | `addChannel(channelId, priority, podcast)` — looks up title + uploads playlist via `YouTubeClient.getChannel(id)` (1 unit), saves to DB, returns the `Channel`; throws `IllegalArgumentException` for an unknown ID. The UI's "Add channel" will call this. |
+| `api/YouTubeLink.java` | Record `(Type type, String value)`, `Type` enum `CHANNEL_ID / HANDLE / VIDEO_ID`. `static parse(text)` reads any copied YouTube link (`/@handle`, `/channel/UC...`, `watch?v=`, `youtu.be/`, `/shorts/`, `/live/`, m./music. hosts, bare `UC...` or `@handle`) or returns null. Pure Java, no API calls. |
+| `service/ChannelService.java` | `addChannel(channelId, priority, podcast)` — looks up title + uploads playlist via `YouTubeClient.getChannel(id)` (1 unit), saves to DB, returns the `Channel`; throws `IllegalArgumentException` for an unknown ID. Also `addChannelFromLink(text, priority, podcast)` — parses with `YouTubeLink`; handle → `YouTubeClient.getChannelByHandle` (`channels?forHandle=`, 1 unit); video link → that video's channel. The UI's "Add from clipboard" button will call this. |
 | `storage/WatchedRepository.java` | SQLite `watched_videos` table (`video_id` PK, `watched_at` ISO text). `initialize()`, `markWatched(id)` (upsert, updates time), `markUnwatched(id)`, `isWatched(id)`, `getWatchedIds()` → `Set<String>`. |
 | `service/VideoOpener.java` | `open(videoId)` — runs `opera.exe <watch URL>` via `ProcessBuilder` (adds a tab to the open Opera window), then `markWatched`. Throws `IllegalStateException` if `opera.path` is missing/wrong; a failed launch never marks watched. Constructor: `(operaPath, WatchedRepository)`. |
 | `service/FeedFilter.java` | `static newest(videos, limit, hideWatched, watchedIds)` — keeps the first `limit` videos, skipping watched ones before counting so channels still fill up. Used by both feeds. |
@@ -59,6 +62,14 @@ Using an **API key only** (public data), no OAuth for now. OAuth would only be n
 Saved test data: JRE (`UCzQUP1qoWDoEbmsQxvdjxgQ`, uploads `UUzQUP1qoWDoEbmsQxvdjxgQ`), priority 5, podcast = true.
 
 Podcast vs subscription split: a single `podcast` boolean. Podcast feed = `podcast == true`, subscription feed = `podcast == false`. If a channel ever needs to be in both feeds, split into two booleans.
+
+## Refresh policy (decided)
+
+Fetch from YouTube only: on launch, automatically once per hour, and on a manual Refresh button. Everything else (marking watched, hiding watched, re-sorting, opening a video) works on the already-fetched videos kept in memory — no API calls. Budget: roughly 2 units per channel per refresh, so ~30 refreshes/day is a tiny fraction of the 10,000/day quota.
+
+## Adding channels/songs (decided)
+
+No hunting for IDs. In the UI: copy the address bar in Opera (Ctrl+L, Ctrl+C), click **"Add from clipboard"**; the app reads the clipboard and uses `YouTubeLink.parse`. Never search by name (`search` = 100 units). A possible later add-on: an Opera GX extension (JavaScript) that sends the current tab URL to a localhost-only HTTP server in the app — reuses the same parsing.
 
 ## Next steps (rough order)
 
