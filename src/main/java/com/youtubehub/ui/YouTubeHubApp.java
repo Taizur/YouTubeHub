@@ -5,11 +5,13 @@ import com.youtubehub.config.AppConfig;
 import com.youtubehub.model.ScoredVideo;
 import com.youtubehub.model.Video;
 import com.youtubehub.service.ChannelService;
+import com.youtubehub.service.MusicService;
 import com.youtubehub.service.PodcastService;
 import com.youtubehub.service.SubscriptionService;
 import com.youtubehub.service.VideoCache;
 import com.youtubehub.service.VideoOpener;
 import com.youtubehub.storage.ChannelRepository;
+import com.youtubehub.storage.MusicRepository;
 import com.youtubehub.storage.WatchedRepository;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -61,6 +63,8 @@ public class YouTubeHubApp extends Application {
     private PodcastService podcastService;
     private SubscriptionService subscriptionService;
     private ChannelService channelService;
+    private MusicRepository musicRepository;
+    private MusicService musicService;
     private VideoOpener videoOpener;
 
     // The rows read this to decide which videos get the "✓ Watched" look.
@@ -96,11 +100,13 @@ public class YouTubeHubApp extends Application {
         ChannelsPane channelsPane = new ChannelsPane(channelRepository, channelService, videoCache, this::rebuildFeeds);
         Tab podcastTab = new Tab("Podcasts", podcastList);
         Tab subscriptionTab = new Tab("Subscriptions", subscriptionList);
+        Tab musicTab = new Tab("Music", new MusicPane(musicRepository, musicService, videoOpener));
         Tab channelsTab = new Tab("Channels", channelsPane);
         podcastTab.setClosable(false);
         subscriptionTab.setClosable(false);
+        musicTab.setClosable(false);
         channelsTab.setClosable(false);
-        TabPane tabs = new TabPane(podcastTab, subscriptionTab, channelsTab);
+        TabPane tabs = new TabPane(podcastTab, subscriptionTab, musicTab, channelsTab);
 
         BorderPane root = new BorderPane();
         root.setTop(toolbar);
@@ -129,11 +135,14 @@ public class YouTubeHubApp extends Application {
         channelRepository.initialize();
         watchedRepository = new WatchedRepository();
         watchedRepository.initialize();
+        musicRepository = new MusicRepository();
+        musicRepository.initialize();
 
         videoCache = new VideoCache(client);
         podcastService = new PodcastService(channelRepository, watchedRepository, videoCache);
         subscriptionService = new SubscriptionService(channelRepository, watchedRepository, videoCache, HOURS_PER_PRIORITY_POINT);
         channelService = new ChannelService(channelRepository, client);
+        musicService = new MusicService(musicRepository, client);
         videoOpener = new VideoOpener(config.getOperaPath(), watchedRepository);
     }
 
