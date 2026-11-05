@@ -27,7 +27,7 @@ Using an **API key only** (public data), no OAuth for now. OAuth would only be n
 
 ## Secrets and local files
 
-- `config.properties` in the **project root** holds `youtube.api.key=...`. It is gitignored. **Never commit it, print it, or log the full request URL** (the key is in the query string).
+- `config.properties` in the **project root** holds `youtube.api.key=...` and `opera.path=...`. It is gitignored. **Never commit it, print it, or log the full request URL** (the key is in the query string).
 - `youtubehub.db` (SQLite database, created automatically in the project root at runtime) is gitignored.
 - Repo is on GitHub (private).
 
@@ -42,13 +42,14 @@ Using an **API key only** (public data), no OAuth for now. OAuth would only be n
 | File | Status / purpose |
 |---|---|
 | `Main.java` | Test bench only. Currently loads config, initializes the DB, builds the podcast feed and prints it. |
-| `config/AppConfig.java` | Loads `config.properties` with `Properties`; `load()`, `getApiKey()`. |
+| `config/AppConfig.java` | Loads `config.properties` with `Properties`; `load()`, `getApiKey()`, `getOperaPath()` (`opera.path`, currently `C:/Users/brand/AppData/Local/Programs/Opera GX/opera.exe`). |
 | `api/YouTubeClient.java` | Talks to YouTube. Private `get(endpointAndQuery)` helper adds base URL + key, sends request, throws `IOException` on non-200. Methods: `getVideoJson(id)`, `getVideo(id)` → `Video`, `getUploadsPlaylistId(channelId)` → `UU...` or null, `getPlaylistItemsJson(playlistId, maxResults)` (clamped to 1–50, the API limit), `getRecentUploads(channelId, maxResults)` → `List<Video>`, `getVideosFromPlaylist(playlistId, maxResults)` → `List<Video>`, **always drops live streams/VODs** (private `findStreamIds` does one `videos?part=liveStreamingDetails` call, 1 unit; a video with a `liveStreamingDetails` section is a stream). Brandon never wants VODs shown. It scans the newest 50 uploads (`UPLOADS_TO_SCAN`, same 1 unit), drops streams, then keeps the newest `maxResults`. Subscription feed uses 3 per channel, podcasts 5. |
 | `model/Video.java` | `videoId`, `videoTitle`, `channelID`, `channelTitle`, `publishedAt` (all Strings; publishedAt is ISO-8601 like `2026-10-29T17:00:32Z`). Getters, plus `getPublishedInstant()` → `Instant` or null if blank. |
 | `model/Channel.java` | `channelId`, `channelTitle`, `uploadsPlaylistId`, `priority` (int), `podcast` (boolean). Getters + `setPriority`, `setPodcast`. |
 | `storage/ChannelRepository.java` | SQLite `channels` table. `initialize()`, `addChannel` (upsert), `getAllChannels`, `removeChannel`, `updatePriority`, `updatePodcast`. |
 | `service/ChannelService.java` | `addChannel(channelId, priority, podcast)` — looks up title + uploads playlist via `YouTubeClient.getChannel(id)` (1 unit), saves to DB, returns the `Channel`; throws `IllegalArgumentException` for an unknown ID. The UI's "Add channel" will call this. |
 | `storage/WatchedRepository.java` | SQLite `watched_videos` table (`video_id` PK, `watched_at` ISO text). `initialize()`, `markWatched(id)` (upsert, updates time), `markUnwatched(id)`, `isWatched(id)`, `getWatchedIds()` → `Set<String>`. |
+| `service/VideoOpener.java` | `open(videoId)` — runs `opera.exe <watch URL>` via `ProcessBuilder` (adds a tab to the open Opera window), then `markWatched`. Throws `IllegalStateException` if `opera.path` is missing/wrong; a failed launch never marks watched. Constructor: `(operaPath, WatchedRepository)`. |
 | `service/FeedFilter.java` | `static newest(videos, limit, hideWatched, watchedIds)` — keeps the first `limit` videos, skipping watched ones before counting so channels still fill up. Used by both feeds. |
 | `service/PodcastService.java` | `getPodcastFeed(videosPerChannel, hideWatched)` — all channels where `podcast == true`, fetch 50 from each saved uploads playlist, `FeedFilter.newest`, combine, sort newest first (string sort on ISO date). Constructor takes `ChannelRepository, WatchedRepository, YouTubeClient`. |
 | `service/SubscriptionService.java` | `getSubscriptionFeed(videosPerChannel, hideWatched)` → `List<ScoredVideo>` (constructor: `ChannelRepository, WatchedRepository, YouTubeClient, hoursPerPriorityPoint`), non-podcast channels ranked by effective age: `realAgeHours - priority * hoursPerPriorityPoint` (lowest first). `hoursPerPriorityPoint` is a constructor arg (Main uses 24); later it becomes a UI setting. |
@@ -65,7 +66,7 @@ Podcast vs subscription split: a single `podcast` boolean. Podcast feed = `podca
 2. Channels are never hardcoded: they get added through the UI (step 6) via `ChannelService.addChannel` (done). Main can call it temporarily to put test data in the DB.
 3. ~~**Subscription feed service**~~ (done; tune `hoursPerPriorityPoint`). — non-podcast channels, ranked by a tunable priority/recency score. Per-channel priority is already in the DB; the overall weighting should become a user setting editable in the UI. Convert `publishedAt` to `Instant` for the math.
 4. ~~Watched tracking~~ (done: `WatchedRepository` + `hideWatched` on both feeds). Still to do in the UI: show a watched marker when not hiding.
-5. Open videos in a new Opera GX tab (configurable executable path), mark as watched on click.
+5. ~~Open videos in a new Opera GX tab~~ (done: `VideoOpener`). The UI's click handler will call it.
 6. JavaFX UI — Podcasts / Subscriptions / Music sections, channel management screen.
 7. Music library and playlists (own tables; YouTube sync would need OAuth). **Music is song-based, not channel-based**: Brandon adds individual videos he likes (by video ID/URL), regardless of channel. Planned tables: `songs` (video ID, title, channel title, added timestamp — filled via `getVideo(id)`, 1 unit), `playlists` (id, name, e.g. "Metal"), `playlist_songs` (playlist id + video ID, links a song to any number of playlists). The master playlist = every row in `songs` (no separate table needed). Music does not use the `channels` table.
 

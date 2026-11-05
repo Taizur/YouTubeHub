@@ -10,6 +10,7 @@ import java.util.Properties;
 public class AppConfig {
     private static final Path CONFIG_PATH = Path.of("config.properties");
     private String apiKey;
+    private String operaPath;
 
     public void load() throws IOException {
         Properties properties = new Properties();
@@ -19,9 +20,15 @@ public class AppConfig {
         }
 
         apiKey = properties.getProperty("youtube.api.key");
+        operaPath = properties.getProperty("opera.path");
     }
 
     public String getApiKey() {
         return apiKey;
+    }
+
+    // Full path to Opera GX's opera.exe, or null if config.properties doesn't have opera.path.
+    public String getOperaPath() {
+        return operaPath;
     }
 }
