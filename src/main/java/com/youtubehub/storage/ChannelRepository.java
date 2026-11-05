@@ -35,6 +35,11 @@ public class ChannelRepository {
         try (Connection connection = connect();
              Statement statement = connection.createStatement()) {
             statement.execute(sql);
+
+            // One-time tidy-up from the old 1–10 priorities to tier levels 1–4 (see model/Tier).
+            // Old 5 -> Favorite (4); anything already 1–4 is left alone. Harmless to run every startup.
+            statement.execute("UPDATE channels SET priority = 4 WHERE priority > 4;");
+            statement.execute("UPDATE channels SET priority = 1 WHERE priority < 1;");
         }
     }
 

@@ -10,7 +10,7 @@
     #page { color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .row { display: flex; gap: 6px; align-items: center; }
     select { flex: 1; }
-    input[type=number] { width: 45px; }
+    #priority { flex: 0 0 auto; }
     #message { margin-top: 12px; min-height: 1.2em; }
   </style>
 </head>
@@ -26,7 +26,13 @@
 
   <h2>Channel</h2>
   <div class="row">
-    <label>Priority <input id="priority" type="number" min="1" max="10" value="3"></label>
+    <!-- The values are the app's tier levels (model/Tier.java): 4 = Favorite ... 1 = Desperate -->
+    <select id="priority">
+      <option value="4">Favorite</option>
+      <option value="3">High</option>
+      <option value="2" selected>Good filler</option>
+      <option value="1">Desperate</option>
+    </select>
     <label><input id="podcast" type="checkbox"> Podcast</label>
     <button id="addChannel">Add channel</button>
   </div>

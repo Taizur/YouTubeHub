@@ -3,6 +3,7 @@ package com.youtubehub.ui;
 import com.youtubehub.api.YouTubeClient;
 import com.youtubehub.config.AppConfig;
 import com.youtubehub.model.ScoredVideo;
+import com.youtubehub.model.Settings;
 import com.youtubehub.model.Video;
 import com.youtubehub.player.PlayQueue;
 import com.youtubehub.player.Player;
@@ -16,6 +17,7 @@ import com.youtubehub.service.VideoCache;
 import com.youtubehub.service.VideoOpener;
 import com.youtubehub.storage.ChannelRepository;
 import com.youtubehub.storage.MusicRepository;
+import com.youtubehub.storage.SettingsRepository;
 import com.youtubehub.storage.WatchedRepository;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -52,16 +54,15 @@ import java.util.Set;
 //
 // Layout:
 //   top:    [Refresh] [Show watched]  status text   [Skip] [Stop]  Now playing: ...
-//   center: tabs — Podcasts | Subscriptions | Music | Channels
+//   center: tabs — Podcasts | Subscriptions | Music | Channels | Settings
 //
 // Only Refresh (on launch, every hour, or the button) talks to YouTube. Everything else
 // rebuilds the lists from the VideoCache, which is free.
 public class YouTubeHubApp extends Application {
 
-    // Same settings Main uses for now. Later these become user settings in the UI.
-    private static final int PODCASTS_PER_CHANNEL = 5;
-    private static final int SUBSCRIPTIONS_PER_CHANNEL = 3;
-    private static final double HOURS_PER_PRIORITY_POINT = 24;
+    // Feed sizes and priority weighting. Loaded from the database on startup; the Settings tab changes them.
+    private SettingsRepository settingsRepository;
+    private Settings settings = Settings.DEFAULTS;
 
     private ChannelRepository channelRepository;
     private WatchedRepository watchedRepository;
@@ -142,11 +143,13 @@ public class YouTubeHubApp extends Application {
         Tab subscriptionTab = new Tab("Subscriptions", subscriptionList);
         Tab musicTab = new Tab("Music", musicPane);
         Tab channelsTab = new Tab("Channels", channelsPane);
+        Tab settingsTab = new Tab("Settings", new SettingsPane(settingsRepository, settings, this::applySettings));
+        settingsTab.setClosable(false);
         podcastTab.setClosable(false);
         subscriptionTab.setClosable(false);
         musicTab.setClosable(false);
         channelsTab.setClosable(false);
-        TabPane tabs = new TabPane(podcastTab, subscriptionTab, musicTab, channelsTab);
+        TabPane tabs = new TabPane(podcastTab, subscriptionTab, musicTab, channelsTab, settingsTab);
 
         BorderPane root = new BorderPane();
         root.setTop(toolbar);
@@ -183,7 +186,10 @@ public class YouTubeHubApp extends Application {
 
         videoCache = new VideoCache(client);
         podcastService = new PodcastService(channelRepository, watchedRepository, videoCache);
-        subscriptionService = new SubscriptionService(channelRepository, watchedRepository, videoCache, HOURS_PER_PRIORITY_POINT);
+        settingsRepository = new SettingsRepository();
+        settingsRepository.initialize();
+        settings = settingsRepository.load();
+        subscriptionService = new SubscriptionService(channelRepository, watchedRepository, videoCache, settings.hoursPerPriorityPoint());
         channelService = new ChannelService(channelRepository, client);
         musicService = new MusicService(musicRepository, client);
         videoOpener = new VideoOpener(config.getOperaPath(), watchedRepository);
@@ -223,6 +229,14 @@ public class YouTubeHubApp extends Application {
         nowPlayingLabel.setText(player.getStatusText());
         skipButton.setDisable(!player.isPlaying());
         stopButton.setDisable(!player.isPlaying());
+        rebuildFeeds();
+    }
+
+    // Called by the Settings tab after it saves. The cache already holds 50 videos per channel,
+    // so bigger feed sizes and a new weighting are just a rebuild: no YouTube calls.
+    private void applySettings(Settings newSettings) {
+        settings = newSettings;
+        subscriptionService.setHoursPerPriorityPoint(newSettings.hoursPerPriorityPoint());
         rebuildFeeds();
     }
 
@@ -340,10 +354,10 @@ public class YouTubeHubApp extends Application {
             watchedIds.addAll(watchedRepository.getWatchedIds());
 
             boolean hideWatched = !showWatched.isSelected();
-            List<Video> podcasts = podcastService.getPodcastFeed(PODCASTS_PER_CHANNEL, hideWatched);
+            List<Video> podcasts = podcastService.getPodcastFeed(settings.podcastsPerChannel(), hideWatched);
 
             List<Video> subscriptions = new ArrayList<>();
-            for (ScoredVideo scored : subscriptionService.getSubscriptionFeed(SUBSCRIPTIONS_PER_CHANNEL, hideWatched)) {
+            for (ScoredVideo scored : subscriptionService.getSubscriptionFeed(settings.subscriptionsPerChannel(), hideWatched)) {
                 subscriptions.add(scored.video()); // already in ranked order
             }
 

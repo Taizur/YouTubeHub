@@ -3,6 +3,7 @@ package com.youtubehub.service;
 import com.youtubehub.api.YouTubeClient;
 import com.youtubehub.api.YouTubeLink;
 import com.youtubehub.model.Channel;
+import com.youtubehub.model.Tier;
 import com.youtubehub.model.Video;
 import com.youtubehub.storage.ChannelRepository;
 
@@ -64,8 +65,9 @@ public class ChannelService {
     }
 
     // Applies your settings and saves the channel to the database.
+    // `priority` is a tier level (see model/Tier); anything out of range is pulled into 1–4.
     private Channel save(Channel channel, int priority, boolean podcast) throws SQLException {
-        channel.setPriority(priority);
+        channel.setPriority(Tier.fromLevel(priority).level());
         channel.setPodcast(podcast);
         channelRepository.addChannel(channel);
         return channel;

@@ -1,6 +1,7 @@
 package com.youtubehub.ui;
 
 import com.youtubehub.model.Channel;
+import com.youtubehub.model.Tier;
 import com.youtubehub.service.ChannelService;
 import com.youtubehub.service.VideoCache;
 import com.youtubehub.storage.ChannelRepository;
@@ -14,7 +15,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.Spinner;
+import javafx.scene.control.ComboBox;
 import javafx.scene.input.Clipboard;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -25,14 +26,12 @@ import javafx.scene.layout.VBox;
 import java.util.Comparator;
 import java.util.List;
 
-// The Channels tab: add a channel from a copied link, change priority / podcast, remove.
+// The Channels tab: add a channel from a copied link, change tier / podcast, remove.
 //
-//   top:    [priority] [Podcast] [Add from clipboard]  message
-//   center: list of your channels
-//   bottom: edit the selected one: [priority] [Podcast] [Save] [Remove]
+//   top:    [tier] [Podcast] [Add from clipboard]  message
+//   center: list of your channels (highest tier first)
+//   bottom: edit the selected one: [tier] [Podcast] [Save] [Remove]
 public class ChannelsPane extends BorderPane {
-    private static final int MIN_PRIORITY = 1;
-    private static final int MAX_PRIORITY = 10;
 
     private final ChannelRepository channelRepository;
     private final ChannelService channelService;
@@ -42,12 +41,12 @@ public class ChannelsPane extends BorderPane {
     private final ListView<Channel> channelList = new ListView<>();
     private final Label message = new Label();
 
-    private final Spinner<Integer> newPriority = new Spinner<>(MIN_PRIORITY, MAX_PRIORITY, 3);
+    private final ComboBox<Tier> newTier = tierPicker(Tier.GOOD_FILLER);
     private final CheckBox newPodcast = new CheckBox("Podcast");
     private final Button addButton = new Button("Add from clipboard");
 
     private final Label selectedName = new Label("Select a channel");
-    private final Spinner<Integer> editPriority = new Spinner<>(MIN_PRIORITY, MAX_PRIORITY, 3);
+    private final ComboBox<Tier> editTier = tierPicker(Tier.GOOD_FILLER);
     private final CheckBox editPodcast = new CheckBox("Podcast");
     private final Button saveButton = new Button("Save");
     private final Button removeButton = new Button("Remove");
@@ -66,18 +65,19 @@ public class ChannelsPane extends BorderPane {
         hint.getStyleClass().add("muted");
         message.getStyleClass().add("message");
         addButton.getStyleClass().add("accent");
-        newPriority.setPrefWidth(80);
-        HBox addBar = new HBox(10, hint, new Label("Priority"), newPriority, newPodcast, addButton, message);
+        HBox addBar = new HBox(10, hint, new Label("Tier"), newTier, newPodcast, addButton, message);
         addBar.getStyleClass().add("pane-bar");
         addBar.setAlignment(Pos.CENTER_LEFT);
         addButton.setOnAction(event -> addFromClipboard());
 
         // --- center: list ---
-        // Each row: channel name in bold, "Priority 5" under it, and a purple "Podcast" badge if it is one.
+        // Each row: channel name in bold, which feed it's in under it, and on the right a purple
+        // "Podcast" badge (if it is one) plus a coloured tier badge.
         channelList.setCellFactory(view -> new ListCell<>() {
             private final Label name = new Label();
             private final Label details = new Label();
             private final Label podcastBadge = new Label("Podcast");
+            private final Label tierBadge = new Label();
             private final HBox row;
 
             {   // runs when each row is created (like a constructor for this unnamed class)
@@ -86,7 +86,7 @@ public class ChannelsPane extends BorderPane {
                 podcastBadge.getStyleClass().addAll("badge", "podcast");
                 Region gap = new Region();
                 HBox.setHgrow(gap, Priority.ALWAYS);
-                row = new HBox(10, new VBox(3, name, details), gap, podcastBadge);
+                row = new HBox(8, new VBox(3, name, details), gap, podcastBadge, tierBadge);
                 row.setAlignment(Pos.CENTER_LEFT);
             }
 
@@ -97,9 +97,13 @@ public class ChannelsPane extends BorderPane {
                 if (empty || channel == null) {
                     setGraphic(null);
                 } else {
+                    Tier tier = Tier.fromLevel(channel.getPriority());
                     name.setText(channel.getChannelTitle());
-                    details.setText("Priority " + channel.getPriority());
+                    details.setText(channel.isPodcast() ? "Podcasts feed" : "Subscriptions feed");
                     podcastBadge.setVisible(channel.isPodcast());
+                    podcastBadge.setManaged(channel.isPodcast());
+                    tierBadge.setText(tier.toString());
+                    tierBadge.getStyleClass().setAll("label", "badge", tier.styleClass()); // colour per tier (app.css)
                     setGraphic(row);
                 }
             }
@@ -108,10 +112,9 @@ public class ChannelsPane extends BorderPane {
 
         // --- bottom: edit selected (in a rounded "card") ---
         selectedName.getStyleClass().add("video-title");
-        editPriority.setPrefWidth(80);
         Region editGap = new Region();
         HBox.setHgrow(editGap, Priority.ALWAYS);
-        editBar = new HBox(10, selectedName, editGap, new Label("Priority"), editPriority, editPodcast, saveButton, removeButton);
+        editBar = new HBox(10, selectedName, editGap, new Label("Tier"), editTier, editPodcast, saveButton, removeButton);
         editBar.getStyleClass().add("card");
         editBar.setAlignment(Pos.CENTER_LEFT);
         editBar.setDisable(true);
@@ -125,7 +128,7 @@ public class ChannelsPane extends BorderPane {
             editBar.setDisable(channel == null);
             if (channel != null) {
                 selectedName.setText(channel.getChannelTitle());
-                editPriority.getValueFactory().setValue(clampPriority(channel.getPriority()));
+                editTier.setValue(Tier.fromLevel(channel.getPriority()));
                 editPodcast.setSelected(channel.isPodcast());
             } else {
                 selectedName.setText("Select a channel");
@@ -159,7 +162,7 @@ public class ChannelsPane extends BorderPane {
             return;
         }
 
-        int priority = newPriority.getValue();
+        int priority = newTier.getValue().level();
         boolean podcast = newPodcast.isSelected();
         addButton.setDisable(true);
         message.setText("Adding...");
@@ -193,7 +196,7 @@ public class ChannelsPane extends BorderPane {
             return;
         }
         try {
-            channelRepository.updatePriority(channel.getChannelId(), editPriority.getValue());
+            channelRepository.updatePriority(channel.getChannelId(), editTier.getValue().level());
             channelRepository.updatePodcast(channel.getChannelId(), editPodcast.isSelected());
             message.setText("Saved " + channel.getChannelTitle());
             reloadChannels();
@@ -228,8 +231,12 @@ public class ChannelsPane extends BorderPane {
         }
     }
 
-    // Keeps old priorities (e.g. 0) inside the spinner's range
-    private static int clampPriority(int priority) {
-        return Math.max(MIN_PRIORITY, Math.min(MAX_PRIORITY, priority));
+    // A dropdown of the four tiers, highest first.
+    private static ComboBox<Tier> tierPicker(Tier selected) {
+        ComboBox<Tier> picker = new ComboBox<>();
+        picker.getItems().setAll(Tier.highestFirst());
+        picker.setValue(selected);
+        picker.setPrefWidth(130);
+        return picker;
     }
 }

@@ -200,6 +200,59 @@
     -fx-background-color: -yt-muted;
 }
 
+/* ---------- dropdowns (tier pickers) ---------- */
+
+.combo-box-base {
+    -fx-background-color: -yt-elevated;
+    -fx-background-radius: 8;
+    -fx-background-insets: 0;
+    -fx-border-color: -yt-border;
+    -fx-border-radius: 8;
+    -fx-cursor: hand;
+}
+
+.combo-box-base:hover {
+    -fx-background-color: -yt-hover;
+}
+
+.combo-box-base:focused {
+    -fx-border-color: -yt-focus;
+}
+
+.combo-box > .list-cell {
+    -fx-text-fill: -yt-text;
+    -fx-padding: 6 4 6 10;
+}
+
+.combo-box-base > .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.combo-box-base > .arrow-button > .arrow {
+    -fx-background-color: -yt-muted;
+}
+
+.combo-box-popup > .list-view {
+    -fx-background-color: -yt-elevated;
+    -fx-background-radius: 8;
+    -fx-border-color: -yt-border;
+    -fx-border-radius: 8;
+    -fx-padding: 4;
+}
+
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-text-fill: -yt-text;
+    -fx-padding: 6 10 6 10;
+}
+
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:hover,
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
+    -fx-background-color: -yt-accent;
+    -fx-text-fill: white;
+}
+
 /* ---------- tabs ---------- */
 
 .tab-pane > .tab-header-area {
@@ -305,6 +358,27 @@
     -fx-text-fill: #c49bff;
 }
 
+/* Channel tiers (model/Tier.styleClass()) */
+.badge.tier-favorite {
+    -fx-background-color: #3a2e10;
+    -fx-text-fill: #ffcf4a;
+}
+
+.badge.tier-high {
+    -fx-background-color: #3a1a1e;
+    -fx-text-fill: #ff8a95;
+}
+
+.badge.tier-good-filler {
+    -fx-background-color: #14283a;
+    -fx-text-fill: #7cc4ff;
+}
+
+.badge.tier-desperate {
+    -fx-background-color: #26262d;
+    -fx-text-fill: #a0a0ad;
+}
+
 /* ---------- sidebar, bars and cards ---------- */
 
 .sidebar {
@@ -327,6 +401,13 @@
     -fx-border-color: -yt-border;
     -fx-border-radius: 12;
     -fx-padding: 12 16 12 16;
+}
+
+/* Scrolling areas (the Settings tab) see straight through to the dark background */
+.scroll-pane, .scroll-pane > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
 }
 
 /* ---------- scroll bars: thin, no arrows ---------- */

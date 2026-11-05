@@ -30,7 +30,7 @@ import java.util.concurrent.Executors;
 // Adding (from extension/popup.js):
 //   GET /playlists                                   -> {"playlists": [{"id": 1, "name": "Metal"}, ...]}
 //   GET /add-song?url=...&playlist=ID                -> {"ok": true/false, "message": "..."}
-//   GET /add-channel?url=...&priority=5&podcast=true -> {"ok": true/false, "message": "..."}
+//   GET /add-channel?url=...&priority=4&podcast=true -> {"ok": true/false, "message": "..."}  (priority = tier level 1–4)
 public class ExtensionServer {
     public static final int PORT = 8765; // must match APP_URL in extension/background.js and popup.js
 
@@ -100,7 +100,7 @@ public class ExtensionServer {
                     result(answer, () -> adder.addSong(url, playlistId));
                 }
                 case "/add-channel" -> {
-                    int priority = Integer.parseInt(query.getOrDefault("priority", "3"));
+                    int priority = Integer.parseInt(query.getOrDefault("priority", "2")); // tier level; 2 = Good filler
                     boolean podcast = Boolean.parseBoolean(query.get("podcast"));
                     result(answer, () -> adder.addChannel(url, priority, podcast));
                 }

@@ -8,7 +8,7 @@ const APP_URL = "http://127.0.0.1:8765/"; // must match ExtensionServer.PORT in 
 
 const pageLabel = document.getElementById("page");
 const playlistSelect = document.getElementById("playlist");
-const priorityInput = document.getElementById("priority");
+const priorityInput = document.getElementById("priority"); // the tier dropdown; its value is the tier level
 const podcastBox = document.getElementById("podcast");
 const addSongButton = document.getElementById("addSong");
 const addChannelButton = document.getElementById("addChannel");

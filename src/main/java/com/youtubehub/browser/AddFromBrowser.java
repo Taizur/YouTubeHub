@@ -2,6 +2,7 @@ package com.youtubehub.browser;
 
 import com.youtubehub.model.Channel;
 import com.youtubehub.model.Playlist;
+import com.youtubehub.model.Tier;
 import com.youtubehub.model.Video;
 import com.youtubehub.service.ChannelService;
 import com.youtubehub.service.MusicService;
@@ -53,6 +54,7 @@ public class AddFromBrowser {
         Channel channel = channelService.addChannelFromLink(url, priority, podcast); // 1 quota unit
         videoCache.refreshChannel(channel); // fetch its videos now so it shows up in the feed straight away
         onAdded.run();
-        return "Added " + channel.getChannelTitle() + (podcast ? " as a podcast" : "");
+        return "Added " + channel.getChannelTitle() + " (" + Tier.fromLevel(channel.getPriority())
+                + (podcast ? ", podcast)" : ")");
     }
 }
