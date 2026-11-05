@@ -82,7 +82,7 @@ public class YouTubeClient {
     }
 
     public String getPlaylistItemsJson(String playlistId) throws IOException, InterruptedException {
-        return get("/playlistItems?part=snippet,contentDetails&playlistId=" + playlistId + "&maxResults=10");
+        return get("/playlistItems?part=snippet,contentDetails&playlistId=" + playlistId + "&maxResults=3");
     }
 
     public List<Video> getRecentUploads(String channelId) throws IOException, InterruptedException {
@@ -91,6 +91,10 @@ public class YouTubeClient {
             return new ArrayList<>();
         }
 
+        return getVideosFromPlaylist(playlistId);
+    }
+
+    public List<Video> getVideosFromPlaylist(String playlistId) throws IOException, InterruptedException {
         String json = getPlaylistItemsJson(playlistId);
         JsonNode root = mapper.readTree(json);
         JsonNode items = root.path("items");
