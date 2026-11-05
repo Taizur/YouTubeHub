@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "YouTubeHub",
+  "version": "1.0",
+  "description": "Plays YouTubeHub videos one after another in a single tab, and adds songs and channels to the app.",
+  "permissions": ["activeTab"],
+  "host_permissions": ["http://127.0.0.1:8765/*"],
+  "action": {
+    "default_title": "YouTubeHub",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

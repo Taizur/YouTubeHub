@@ -2,6 +2,8 @@ package com.youtubehub.ui;
 
 import com.youtubehub.model.Playlist;
 import com.youtubehub.model.Video;
+import com.youtubehub.player.PlayQueue;
+import com.youtubehub.player.Player;
 import com.youtubehub.service.MusicService;
 import com.youtubehub.service.VideoOpener;
 import com.youtubehub.storage.MusicRepository;
@@ -32,10 +34,11 @@ import java.util.Set;
 // The Music tab.
 //
 //   left:   "All songs" + your playlists, with [New] [Rename] [Delete] under them
-//   top:    [Add song from clipboard]  message
+//   top:    [Shuffle play]  [Add song from clipboard]  message
 //   center: songs in whatever's selected on the left
 //
-// Right-click a song: open it, tick/untick which playlists it's in, remove it.
+// Music always shuffles: Shuffle play, or double-click a song to play it first and the rest shuffled.
+// Right-click a song: play/open it, tick/untick which playlists it's in, remove it.
 public class MusicPane extends BorderPane {
     // Not a real playlist: stands for "every song in your library". Real playlist ids start at 1.
     private static final Playlist ALL_SONGS = new Playlist(0, "All songs");
@@ -43,16 +46,18 @@ public class MusicPane extends BorderPane {
     private final MusicRepository musicRepository;
     private final MusicService musicService;
     private final VideoOpener videoOpener;
+    private final Player player;
 
     private final ListView<Playlist> playlistList = new ListView<>();
     private final ListView<Video> songList = new ListView<>();
     private final Label message = new Label();
     private final Button addButton = new Button("Add song from clipboard");
 
-    public MusicPane(MusicRepository musicRepository, MusicService musicService, VideoOpener videoOpener) {
+    public MusicPane(MusicRepository musicRepository, MusicService musicService, VideoOpener videoOpener, Player player) {
         this.musicRepository = musicRepository;
         this.musicService = musicService;
         this.videoOpener = videoOpener;
+        this.player = player;
 
         // --- left: playlists ---
         // Playlist is a record, so ListView would show "Playlist[id=1, name=Metal]". Show just the name.
@@ -79,7 +84,9 @@ public class MusicPane extends BorderPane {
 
         // --- top: add ---
         Label hint = new Label("Copy a song's video link in Opera (Ctrl+L, Ctrl+C), then:");
-        HBox addBar = new HBox(8, hint, addButton, message);
+        Button shuffleButton = new Button("Shuffle play");
+        shuffleButton.setOnAction(event -> shufflePlay(null));
+        HBox addBar = new HBox(8, shuffleButton, hint, addButton, message);
         addBar.setAlignment(Pos.CENTER_LEFT);
         addBar.setPadding(new Insets(8));
         addButton.setOnAction(event -> addFromClipboard());
@@ -89,7 +96,10 @@ public class MusicPane extends BorderPane {
         songList.setCellFactory(view -> new VideoListCell(new HashSet<>()));
         songList.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
-                openSelectedSong();
+                Video song = songList.getSelectionModel().getSelectedItem();
+                if (song != null) {
+                    shufflePlay(song);
+                }
             }
         });
         ContextMenu songMenu = new ContextMenu();
@@ -135,6 +145,12 @@ public class MusicPane extends BorderPane {
         } catch (Exception e) {
             message.setText("Couldn't load songs: " + e.getMessage());
         }
+    }
+
+    // Called after a song is added from the Opera extension: re-reads playlists and songs,
+    // keeping the same playlist selected.
+    public void reloadSongs() {
+        reloadPlaylists(selectedPlaylist());
     }
 
     private Playlist selectedPlaylist() {
@@ -186,9 +202,11 @@ public class MusicPane extends BorderPane {
             return;
         }
 
-        MenuItem open = new MenuItem("Open in Opera GX");
+        MenuItem play = new MenuItem("Play (rest shuffled)");
+        play.setOnAction(event -> shufflePlay(song));
+        MenuItem open = new MenuItem("Open in new tab");
         open.setOnAction(event -> openSelectedSong());
-        menu.getItems().add(open);
+        menu.getItems().addAll(play, open);
 
         try {
             Menu playlistsMenu = new Menu("Playlists");
@@ -235,6 +253,19 @@ public class MusicPane extends BorderPane {
             showSongs();
         } catch (Exception e) {
             message.setText("Couldn't update playlist: " + e.getMessage());
+        }
+    }
+
+    // Plays the songs on screen in a fresh random order (`first` plays first, if given).
+    private void shufflePlay(Video first) {
+        if (songList.getItems().isEmpty()) {
+            message.setText("No songs here to play.");
+            return;
+        }
+        try {
+            player.play(PlayQueue.shuffled(songList.getItems(), first));
+        } catch (Exception e) {
+            message.setText("Couldn't play: " + e.getMessage());
         }
     }
 

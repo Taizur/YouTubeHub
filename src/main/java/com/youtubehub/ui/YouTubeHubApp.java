@@ -4,6 +4,10 @@ import com.youtubehub.api.YouTubeClient;
 import com.youtubehub.config.AppConfig;
 import com.youtubehub.model.ScoredVideo;
 import com.youtubehub.model.Video;
+import com.youtubehub.player.PlayQueue;
+import com.youtubehub.player.Player;
+import com.youtubehub.browser.AddFromBrowser;
+import com.youtubehub.browser.ExtensionServer;
 import com.youtubehub.service.ChannelService;
 import com.youtubehub.service.MusicService;
 import com.youtubehub.service.PodcastService;
@@ -45,8 +49,8 @@ import java.util.Set;
 // JavaFX calls start() once, after it has set itself up, and hands you the main window (the "Stage").
 //
 // Layout:
-//   top:    [Refresh] [Show watched]  status text
-//   center: tabs — Podcasts | Subscriptions | Channels
+//   top:    [Refresh] [Show watched]  status text   [Skip] [Stop]  Now playing: ...
+//   center: tabs — Podcasts | Subscriptions | Music | Channels
 //
 // Only Refresh (on launch, every hour, or the button) talks to YouTube. Everything else
 // rebuilds the lists from the VideoCache, which is free.
@@ -66,6 +70,11 @@ public class YouTubeHubApp extends Application {
     private MusicRepository musicRepository;
     private MusicService musicService;
     private VideoOpener videoOpener;
+    private Player player;
+    private AddFromBrowser addFromBrowser;
+    private ExtensionServer extensionServer;
+    private ChannelsPane channelsPane;
+    private MusicPane musicPane;
 
     // The rows read this to decide which videos get the "✓ Watched" look.
     // It's one Set that gets refilled, so every row always sees the latest version.
@@ -76,6 +85,9 @@ public class YouTubeHubApp extends Application {
     private final Button refreshButton = new Button("Refresh");
     private final CheckBox showWatched = new CheckBox("Show watched");
     private final Label statusLabel = new Label();
+    private final Button skipButton = new Button("Skip");
+    private final Button stopButton = new Button("Stop");
+    private final Label nowPlayingLabel = new Label();
 
     @Override
     public void start(Stage stage) {
@@ -92,15 +104,20 @@ public class YouTubeHubApp extends Application {
         // Toolbar along the top
         refreshButton.setOnAction(event -> refreshFromYouTube());
         showWatched.setOnAction(event -> rebuildFeeds()); // toggling only re-filters, no API call
-        HBox toolbar = new HBox(12, refreshButton, showWatched, statusLabel);
+        skipButton.setOnAction(event -> skip());
+        stopButton.setOnAction(event -> player.stop());
+        skipButton.setDisable(true);
+        stopButton.setDisable(true);
+        HBox toolbar = new HBox(12, refreshButton, showWatched, statusLabel, skipButton, stopButton, nowPlayingLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(8));
 
         // Tabs. setClosable(false) hides the little "x" on each tab.
-        ChannelsPane channelsPane = new ChannelsPane(channelRepository, channelService, videoCache, this::rebuildFeeds);
+        channelsPane = new ChannelsPane(channelRepository, channelService, videoCache, this::rebuildFeeds);
+        musicPane = new MusicPane(musicRepository, musicService, videoOpener, player);
         Tab podcastTab = new Tab("Podcasts", podcastList);
         Tab subscriptionTab = new Tab("Subscriptions", subscriptionList);
-        Tab musicTab = new Tab("Music", new MusicPane(musicRepository, musicService, videoOpener));
+        Tab musicTab = new Tab("Music", musicPane);
         Tab channelsTab = new Tab("Channels", channelsPane);
         podcastTab.setClosable(false);
         subscriptionTab.setClosable(false);
@@ -118,6 +135,7 @@ public class YouTubeHubApp extends Application {
 
         // Refresh now, then again every hour for as long as the app is open.
         // A Timeline is JavaFX's timer: one KeyFrame "after 1 hour, do this", repeated forever.
+        startExtensionServer();
         refreshFromYouTube();
         Timeline hourly = new Timeline(new KeyFrame(javafx.util.Duration.hours(1), event -> refreshFromYouTube()));
         hourly.setCycleCount(Animation.INDEFINITE);
@@ -144,29 +162,90 @@ public class YouTubeHubApp extends Application {
         channelService = new ChannelService(channelRepository, client);
         musicService = new MusicService(musicRepository, client);
         videoOpener = new VideoOpener(config.getOperaPath(), watchedRepository);
+        player = new Player(videoOpener, watchedRepository);
+        addFromBrowser = new AddFromBrowser(channelService, musicService, musicRepository, videoCache);
+        extensionServer = new ExtensionServer(player, addFromBrowser);
+    }
+
+    // Starts the little local server the Opera extension talks to.
+    // If it can't start (e.g. the port is taken), the app still works: videos just open in new tabs,
+    // and you add things with the clipboard buttons.
+    private void startExtensionServer() {
+        // These get called from the server's threads, so hop over to the screen's thread first.
+        player.setOnChange(() -> Platform.runLater(this::playerChanged));
+        addFromBrowser.setOnAdded(() -> Platform.runLater(() -> {
+            channelsPane.reloadChannels();
+            musicPane.reloadSongs();
+            rebuildFeeds();
+        }));
+        try {
+            extensionServer.start();
+        } catch (Exception e) {
+            showError("The Opera extension can't connect: couldn't start the server on port " + ExtensionServer.PORT, e);
+        }
+    }
+
+    // JavaFX calls this when the window closes.
+    @Override
+    public void stop() {
+        if (extensionServer != null) {
+            extensionServer.stop();
+        }
+    }
+
+    // Now-playing text, Skip/Stop buttons, and the watched marks (feed videos get marked as they load).
+    private void playerChanged() {
+        nowPlayingLabel.setText(player.getStatusText());
+        skipButton.setDisable(!player.isPlaying());
+        stopButton.setDisable(!player.isPlaying());
+        rebuildFeeds();
+    }
+
+    private void skip() {
+        try {
+            player.skip();
+        } catch (Exception e) {
+            showError("Couldn't skip", e);
+        }
     }
 
     // Rows with thumbnails, double-click to open, right-click menu.
     private void setUpVideoList(ListView<Video> list) {
         list.setCellFactory(view -> new VideoListCell(watchedIds));
 
-        // Double-click: open in Opera GX (which also marks it watched)
+        // Double-click: play this video, then carry on down the list (each one gets marked watched)
         list.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
-                openSelected(list);
+                playFromSelected(list);
             }
         });
 
         // Right-click menu. Each item acts on whichever row is selected (right-clicking a row selects it).
-        MenuItem open = new MenuItem("Open in Opera GX");
+        MenuItem play = new MenuItem("Play from here");
+        MenuItem open = new MenuItem("Open in new tab");
         MenuItem markWatched = new MenuItem("Mark watched");
         MenuItem markUnwatched = new MenuItem("Mark unwatched");
+        play.setOnAction(event -> playFromSelected(list));
         open.setOnAction(event -> openSelected(list));
         markWatched.setOnAction(event -> setSelectedWatched(list, true));
         markUnwatched.setOnAction(event -> setSelectedWatched(list, false));
-        list.setContextMenu(new ContextMenu(open, markWatched, markUnwatched));
+        list.setContextMenu(new ContextMenu(play, open, markWatched, markUnwatched));
     }
 
+    // Starts autoplay at the selected video. The queue is a copy of the list as it looks right now.
+    private void playFromSelected(ListView<Video> list) {
+        int index = list.getSelectionModel().getSelectedIndex();
+        if (index < 0) {
+            return;
+        }
+        try {
+            player.play(PlayQueue.inOrder(list.getItems(), index, true));
+        } catch (Exception e) {
+            showError("Couldn't play the video", e);
+        }
+    }
+
+    // The old way: a new Opera tab, no autoplay.
     private void openSelected(ListView<Video> list) {
         Video video = list.getSelectionModel().getSelectedItem();
         if (video == null) {

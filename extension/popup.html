@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!-- The little window that opens when you click the YouTubeHub icon in Opera's toolbar. -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Segoe UI, sans-serif; font-size: 13px; width: 300px; margin: 10px; }
+    h1 { font-size: 15px; margin: 0 0 4px; }
+    h2 { font-size: 13px; margin: 12px 0 4px; }
+    #page { color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row { display: flex; gap: 6px; align-items: center; }
+    select { flex: 1; }
+    input[type=number] { width: 45px; }
+    #message { margin-top: 12px; min-height: 1.2em; }
+  </style>
+</head>
+<body>
+  <h1>YouTubeHub</h1>
+  <div id="page"></div>
+
+  <h2>Song</h2>
+  <div class="row">
+    <select id="playlist"></select>
+    <button id="addSong">Add song</button>
+  </div>
+
+  <h2>Channel</h2>
+  <div class="row">
+    <label>Priority <input id="priority" type="number" min="1" max="10" value="3"></label>
+    <label><input id="podcast" type="checkbox"> Podcast</label>
+    <button id="addChannel">Add channel</button>
+  </div>
+
+  <div id="message"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
