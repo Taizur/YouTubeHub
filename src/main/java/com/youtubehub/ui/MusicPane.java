@@ -24,6 +24,8 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.Clipboard;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.util.HashSet;
@@ -78,22 +80,29 @@ public class MusicPane extends BorderPane {
         deleteButton.setOnAction(event -> deletePlaylist());
         HBox playlistButtons = new HBox(6, newButton, renameButton, deleteButton);
 
-        VBox left = new VBox(6, new Label("Playlists"), playlistList, playlistButtons);
-        left.setPadding(new Insets(8));
+        Label playlistsTitle = new Label("PLAYLISTS");
+        playlistsTitle.getStyleClass().add("section-title");
+        VBox left = new VBox(10, playlistsTitle, playlistList, playlistButtons);
+        left.getStyleClass().add("sidebar"); // darker column with a line on its right (app.css)
+        VBox.setVgrow(playlistList, Priority.ALWAYS); // the list takes all the height the buttons don't
         left.setPrefWidth(240);
 
         // --- top: add ---
-        Label hint = new Label("Copy a song's video link in Opera (Ctrl+L, Ctrl+C), then:");
-        Button shuffleButton = new Button("Shuffle play");
+        Button shuffleButton = new Button("▶  Shuffle play");
+        shuffleButton.getStyleClass().add("accent"); // the red main button
         shuffleButton.setOnAction(event -> shufflePlay(null));
-        HBox addBar = new HBox(8, shuffleButton, hint, addButton, message);
+        message.getStyleClass().add("message");
+        Region gap = new Region();
+        HBox.setHgrow(gap, Priority.ALWAYS);
+        HBox addBar = new HBox(10, shuffleButton, message, gap, addButton);
+        addBar.getStyleClass().add("pane-bar");
         addBar.setAlignment(Pos.CENTER_LEFT);
-        addBar.setPadding(new Insets(8));
         addButton.setOnAction(event -> addFromClipboard());
 
         // --- center: songs ---
         // An empty set = never show the "watched" look; it doesn't apply to music.
         songList.setCellFactory(view -> new VideoListCell(new HashSet<>()));
+        songList.setPlaceholder(new Label("No songs here yet. On a YouTube video, click the YouTubeHub extension icon → Add song."));
         songList.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
                 Video song = songList.getSelectionModel().getSelectedItem();
@@ -106,9 +115,11 @@ public class MusicPane extends BorderPane {
         songMenu.setOnShowing(event -> buildSongMenu(songMenu)); // rebuilt each time, so the ticks are current
         songList.setContextMenu(songMenu);
 
+        // The bar sits above the songs only, so the playlist sidebar runs the full height on the left.
+        BorderPane songsArea = new BorderPane(songList);
+        songsArea.setTop(addBar);
         setLeft(left);
-        setTop(addBar);
-        setCenter(songList);
+        setCenter(songsArea);
 
         reloadPlaylists(ALL_SONGS);
     }
@@ -355,6 +366,7 @@ public class MusicPane extends BorderPane {
     // A small popup with a text box. Returns the typed name, or empty if cancelled / left blank.
     private static Optional<String> askForName(String title, String current) {
         TextInputDialog dialog = new TextInputDialog(current);
+        Theme.apply(dialog);
         dialog.setTitle(title);
         dialog.setHeaderText(null);
         dialog.setContentText("Name:");
@@ -363,6 +375,7 @@ public class MusicPane extends BorderPane {
 
     private static boolean confirm(String question) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, question, ButtonType.YES, ButtonType.NO);
+        Theme.apply(alert);
         alert.setHeaderText(null);
         return alert.showAndWait().orElse(ButtonType.NO) == ButtonType.YES;
     }

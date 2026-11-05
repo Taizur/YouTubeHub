@@ -1,0 +1,439 @@
+/*
+ * YouTubeHub's look: dark, flat, rounded.
+ *
+ * JavaFX CSS works like web CSS with "-fx-" in front of everything.
+ * A selector picks things (".button" = every Button, ".accent" = anything we tagged with
+ * getStyleClass().add("accent")), and the lines inside say how they look.
+ *
+ * Colours are defined once here as named colours (the "-yt-..." names) and reused below,
+ * so changing the accent colour, for example, is a one-line change.
+ */
+
+.root, .dialog-pane, .context-menu, .tooltip {
+    -yt-bg: #0f0f12;          /* window background */
+    -yt-surface: #17171c;     /* header, sidebar, cards */
+    -yt-elevated: #222229;    /* buttons, inputs, menus */
+    -yt-hover: #2c2c35;
+    -yt-border: #2e2e38;
+    -yt-focus: #5c5c6b;       /* outline on whatever the keyboard is on */
+    -yt-text: #ececf1;
+    -yt-muted: #9a9aa8;
+    -yt-accent: #ff4757;      /* the red highlight */
+    -yt-accent-hover: #ff6b78;
+
+    /* JavaFX's built-in theme ("Modena") works out most of its colours from these few,
+       so setting them dark gets everything we don't style by hand dark too. */
+    -fx-base: -yt-elevated;
+    -fx-background: -yt-bg;
+    -fx-control-inner-background: -yt-surface;
+    -fx-control-inner-background-alt: -yt-surface;
+    -fx-accent: -yt-accent;
+    -fx-focus-color: -yt-accent;
+    -fx-faint-focus-color: transparent;
+    -fx-selection-bar: -yt-hover;
+    -fx-selection-bar-non-focused: -yt-hover;
+    -fx-text-base-color: -yt-text;
+    -fx-text-background-color: -yt-text;
+    -fx-text-inner-color: -yt-text;
+    -fx-mark-color: white;
+
+    -fx-font-family: "Segoe UI";
+    -fx-font-size: 13px;
+}
+
+/* ---------- text ---------- */
+
+.label {
+    -fx-text-fill: -yt-text;
+}
+
+.muted, .status, .message {
+    -fx-text-fill: -yt-muted;
+}
+
+.section-title {
+    -fx-text-fill: -yt-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+/* ---------- header bar ---------- */
+
+.app-header {
+    -fx-background-color: -yt-surface;
+    -fx-padding: 10 16 10 16;
+    -fx-border-color: transparent transparent -yt-border transparent;
+}
+
+.logo {
+    -fx-background-color: -yt-accent;
+    -fx-background-radius: 7;
+    -fx-text-fill: white;
+    -fx-font-size: 10px;
+    -fx-padding: 4 7 4 8;
+}
+
+.app-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+}
+
+.now-playing {
+    -fx-background-color: #2b1519;
+    -fx-background-radius: 999;
+    -fx-text-fill: #ff9aa3;
+    -fx-padding: 5 12 5 12;
+}
+
+/* ---------- buttons ---------- */
+
+.button {
+    -fx-background-color: -yt-elevated;
+    -fx-background-radius: 8;
+    -fx-background-insets: 0;
+    -fx-border-color: -yt-border;
+    -fx-border-radius: 8;
+    -fx-text-fill: -yt-text;
+    -fx-padding: 7 14 7 14;
+    -fx-cursor: hand;
+}
+
+/* "focused" = the one the keyboard is on (e.g. after Tab). A quiet outline, not a red one. */
+.button:focused {
+    -fx-background-color: -yt-elevated;
+    -fx-border-color: -yt-focus;
+}
+
+.button:hover {
+    -fx-background-color: -yt-hover;
+}
+
+.button:pressed {
+    -fx-background-color: #383843;
+}
+
+.button:disabled {
+    -fx-opacity: 0.35;
+}
+
+/* The main action on a screen: Shuffle play, Add */
+.button.accent {
+    -fx-background-color: -yt-accent;
+    -fx-border-color: -yt-accent;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.button.accent:hover, .button.accent:focused:hover {
+    -fx-background-color: -yt-accent-hover;
+    -fx-border-color: -yt-accent-hover;
+}
+
+.button.accent:focused {
+    -fx-border-color: white;
+}
+
+/* ---------- check boxes ---------- */
+
+.check-box {
+    -fx-text-fill: -yt-text;
+    -fx-cursor: hand;
+}
+
+.check-box > .box {
+    -fx-background-color: -yt-elevated;
+    -fx-background-radius: 5;
+    -fx-border-color: #4a4a56;
+    -fx-border-radius: 5;
+    -fx-padding: 3;
+}
+
+.check-box:selected > .box {
+    -fx-background-color: -yt-accent;
+    -fx-border-color: -yt-accent;
+}
+
+.check-box:selected > .box > .mark {
+    -fx-background-color: white;
+}
+
+.check-box:focused > .box {
+    -fx-border-color: -yt-focus;
+}
+
+/* ---------- text boxes and number pickers ---------- */
+
+.text-field {
+    -fx-background-color: -yt-elevated;
+    -fx-background-radius: 8;
+    -fx-border-color: -yt-border;
+    -fx-border-radius: 8;
+    -fx-text-fill: -yt-text;
+    -fx-prompt-text-fill: -yt-muted;
+    -fx-highlight-fill: -yt-accent;
+    -fx-padding: 6 10 6 10;
+}
+
+.text-field:focused {
+    -fx-border-color: -yt-focus;
+}
+
+.spinner {
+    -fx-background-color: -yt-elevated;
+    -fx-background-radius: 8;
+    -fx-border-color: -yt-border;
+    -fx-border-radius: 8;
+}
+
+.spinner > .text-field {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.spinner > .increment-arrow-button, .spinner > .decrement-arrow-button {
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+}
+
+.spinner > .increment-arrow-button > .increment-arrow,
+.spinner > .decrement-arrow-button > .decrement-arrow {
+    -fx-background-color: -yt-muted;
+}
+
+/* ---------- tabs ---------- */
+
+.tab-pane > .tab-header-area {
+    -fx-padding: 4 12 0 12;
+}
+
+.tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: -yt-surface;
+    -fx-border-color: transparent transparent -yt-border transparent;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 2 0;
+    -fx-padding: 6 14 8 14;
+    -fx-cursor: hand;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-border-color: -yt-accent;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
+    -fx-text-fill: -yt-muted;
+    -fx-font-size: 14px;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab:hover > .tab-container > .tab-label,
+.tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {
+    -fx-text-fill: -yt-text;
+}
+
+/* Hides the dotted box JavaFX draws around the selected tab */
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .focus-indicator {
+    -fx-border-color: transparent;
+}
+
+.tab-pane > .tab-content-area {
+    -fx-background-color: -yt-bg;
+    -fx-padding: 0;
+}
+
+/* ---------- lists ---------- */
+
+.list-view {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 8 10 8 10;
+}
+
+.list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10;
+    -fx-text-fill: -yt-text;
+    -fx-padding: 8 10 8 10;
+}
+
+.list-view .list-cell:filled:hover {
+    -fx-background-color: -yt-surface;
+}
+
+/* Written out long, because the built-in theme's selected-row rule is this specific */
+.list-view .list-cell:filled:selected,
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
+    -fx-background-color: -yt-elevated;
+    -fx-text-fill: -yt-text;
+}
+
+.list-view .placeholder > .label {
+    -fx-text-fill: -yt-muted;
+    -fx-font-size: 14px;
+}
+
+/* ---------- one video row (VideoListCell) ---------- */
+
+.thumb {
+    -fx-background-color: -yt-elevated;
+    -fx-background-radius: 8;
+}
+
+.video-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.video-meta {
+    -fx-text-fill: -yt-muted;
+    -fx-font-size: 12px;
+}
+
+.badge {
+    -fx-background-color: #183325;
+    -fx-background-radius: 999;
+    -fx-text-fill: #6fdc8c;
+    -fx-font-size: 11px;
+    -fx-padding: 2 8 2 8;
+}
+
+.badge.podcast {
+    -fx-background-color: #2b1f3d;
+    -fx-text-fill: #c49bff;
+}
+
+/* ---------- sidebar, bars and cards ---------- */
+
+.sidebar {
+    -fx-background-color: -yt-surface;
+    -fx-border-color: transparent -yt-border transparent transparent;
+    -fx-padding: 14 12 12 12;
+}
+
+.sidebar > .list-view {
+    -fx-padding: 0;
+}
+
+.pane-bar {
+    -fx-padding: 12 16 4 16;
+}
+
+.card {
+    -fx-background-color: -yt-surface;
+    -fx-background-radius: 12;
+    -fx-border-color: -yt-border;
+    -fx-border-radius: 12;
+    -fx-padding: 12 16 12 16;
+}
+
+/* ---------- scroll bars: thin, no arrows ---------- */
+
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical {
+    -fx-pref-width: 10;
+}
+
+.scroll-bar:horizontal {
+    -fx-pref-height: 10;
+}
+
+.scroll-bar > .thumb {
+    -fx-background-color: #3a3a45;
+    -fx-background-radius: 5;
+    -fx-background-insets: 2;
+}
+
+.scroll-bar > .thumb:hover {
+    -fx-background-color: #4c4c59;
+}
+
+.scroll-bar > .increment-button, .scroll-bar > .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.scroll-bar > .increment-button > .increment-arrow,
+.scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-shape: " ";
+    -fx-padding: 0;
+}
+
+.list-view > .corner {
+    -fx-background-color: transparent;
+}
+
+/* ---------- right-click menus ---------- */
+
+.context-menu {
+    -fx-background-color: -yt-elevated;
+    -fx-background-radius: 10;
+    -fx-border-color: -yt-border;
+    -fx-border-radius: 10;
+    -fx-padding: 5;
+}
+
+.menu-item {
+    -fx-background-radius: 6;
+    -fx-padding: 6 14 6 10;
+}
+
+.menu-item > .label {
+    -fx-text-fill: -yt-text;
+}
+
+.menu-item:focused {
+    -fx-background-color: -yt-accent;
+}
+
+.menu-item:focused > .label {
+    -fx-text-fill: white;
+}
+
+.menu-item:disabled > .label {
+    -fx-text-fill: -yt-muted;
+}
+
+.check-menu-item:checked > .left-container > .check,
+.menu > .right-container > .arrow {
+    -fx-background-color: -yt-text;
+}
+
+.context-menu > .separator > .line {
+    -fx-border-color: -yt-border transparent transparent transparent;
+}
+
+/* ---------- popups (errors, confirm, "New playlist") ---------- */
+
+.dialog-pane {
+    -fx-background-color: -yt-surface;
+}
+
+.dialog-pane > .header-panel {
+    -fx-background-color: -yt-elevated;
+}
+
+.dialog-pane > .header-panel > .label {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.dialog-pane > .content.label {
+    -fx-text-fill: -yt-text;
+    -fx-padding: 16;
+}
+
+.dialog-pane > .button-bar > .container {
+    -fx-background-color: -yt-surface;
+}
+
+.tooltip {
+    -fx-background-color: -yt-elevated;
+    -fx-text-fill: -yt-text;
+    -fx-background-radius: 6;
+}

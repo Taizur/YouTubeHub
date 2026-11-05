@@ -18,6 +18,9 @@ import javafx.scene.control.Spinner;
 import javafx.scene.input.Clipboard;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 
 import java.util.Comparator;
 import java.util.List;
@@ -59,31 +62,60 @@ public class ChannelsPane extends BorderPane {
         this.onChannelsChanged = onChannelsChanged;
 
         // --- top: add ---
-        Label hint = new Label("Copy a channel or video link in Opera (Ctrl+L, Ctrl+C), then:");
-        HBox addBar = new HBox(8, hint, new Label("Priority"), newPriority, newPodcast, addButton, message);
+        Label hint = new Label("Copy a channel or video link (or use the Opera extension), then:");
+        hint.getStyleClass().add("muted");
+        message.getStyleClass().add("message");
+        addButton.getStyleClass().add("accent");
+        newPriority.setPrefWidth(80);
+        HBox addBar = new HBox(10, hint, new Label("Priority"), newPriority, newPodcast, addButton, message);
+        addBar.getStyleClass().add("pane-bar");
         addBar.setAlignment(Pos.CENTER_LEFT);
-        addBar.setPadding(new Insets(8));
         addButton.setOnAction(event -> addFromClipboard());
 
         // --- center: list ---
+        // Each row: channel name in bold, "Priority 5" under it, and a purple "Podcast" badge if it is one.
         channelList.setCellFactory(view -> new ListCell<>() {
+            private final Label name = new Label();
+            private final Label details = new Label();
+            private final Label podcastBadge = new Label("Podcast");
+            private final HBox row;
+
+            {   // runs when each row is created (like a constructor for this unnamed class)
+                name.getStyleClass().add("video-title");
+                details.getStyleClass().add("video-meta");
+                podcastBadge.getStyleClass().addAll("badge", "podcast");
+                Region gap = new Region();
+                HBox.setHgrow(gap, Priority.ALWAYS);
+                row = new HBox(10, new VBox(3, name, details), gap, podcastBadge);
+                row.setAlignment(Pos.CENTER_LEFT);
+            }
+
             @Override
             protected void updateItem(Channel channel, boolean empty) {
                 super.updateItem(channel, empty);
+                setText(null);
                 if (empty || channel == null) {
-                    setText(null);
+                    setGraphic(null);
                 } else {
-                    setText(channel.getChannelTitle() + "   ·   priority " + channel.getPriority()
-                            + (channel.isPodcast() ? "   ·   podcast" : ""));
+                    name.setText(channel.getChannelTitle());
+                    details.setText("Priority " + channel.getPriority());
+                    podcastBadge.setVisible(channel.isPodcast());
+                    setGraphic(row);
                 }
             }
         });
+        channelList.setPlaceholder(new Label("No channels yet. Add one above."));
 
-        // --- bottom: edit selected ---
-        editBar = new HBox(8, selectedName, new Label("Priority"), editPriority, editPodcast, saveButton, removeButton);
+        // --- bottom: edit selected (in a rounded "card") ---
+        selectedName.getStyleClass().add("video-title");
+        editPriority.setPrefWidth(80);
+        Region editGap = new Region();
+        HBox.setHgrow(editGap, Priority.ALWAYS);
+        editBar = new HBox(10, selectedName, editGap, new Label("Priority"), editPriority, editPodcast, saveButton, removeButton);
+        editBar.getStyleClass().add("card");
         editBar.setAlignment(Pos.CENTER_LEFT);
-        editBar.setPadding(new Insets(8));
         editBar.setDisable(true);
+        BorderPane.setMargin(editBar, new Insets(0, 16, 16, 16));
         saveButton.setOnAction(event -> saveSelected());
         removeButton.setOnAction(event -> removeSelected());
 
@@ -181,6 +213,7 @@ public class ChannelsPane extends BorderPane {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
                 "Remove " + channel.getChannelTitle() + " from YouTubeHub?", ButtonType.YES, ButtonType.NO);
         confirm.setHeaderText(null);
+        Theme.apply(confirm);
         if (confirm.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
             return;
         }

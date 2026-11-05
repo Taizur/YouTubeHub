@@ -36,6 +36,8 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 
 import java.time.LocalTime;
@@ -108,9 +110,30 @@ public class YouTubeHubApp extends Application {
         stopButton.setOnAction(event -> player.stop());
         skipButton.setDisable(true);
         stopButton.setDisable(true);
-        HBox toolbar = new HBox(12, refreshButton, showWatched, statusLabel, skipButton, stopButton, nowPlayingLabel);
+        // Header bar:  [▶] YouTubeHub   [Refresh] [Show watched]  Updated at ...   <gap>   Now playing ...  [Skip] [Stop]
+        // The look (colours, rounded corners) comes from app.css; getStyleClass().add(...) tags a
+        // control so the stylesheet can find it.
+        Label logo = new Label("▶");
+        logo.getStyleClass().add("logo");
+        Label appTitle = new Label("YouTubeHub");
+        appTitle.getStyleClass().add("app-title");
+        HBox brand = new HBox(8, logo, appTitle);
+        brand.setAlignment(Pos.CENTER_LEFT);
+        brand.setPadding(new Insets(0, 16, 0, 0));
+
+        statusLabel.getStyleClass().add("status");
+        nowPlayingLabel.getStyleClass().add("now-playing");
+        // Only show the "Now playing" pill when there's something in it
+        nowPlayingLabel.visibleProperty().bind(nowPlayingLabel.textProperty().isNotEmpty());
+        nowPlayingLabel.managedProperty().bind(nowPlayingLabel.visibleProperty());
+        nowPlayingLabel.setMaxWidth(420); // very long titles get "..." instead of pushing the buttons off
+
+        Region gap = new Region(); // empty space that stretches, pushing the player controls to the right
+        HBox.setHgrow(gap, Priority.ALWAYS);
+
+        HBox toolbar = new HBox(10, brand, refreshButton, showWatched, statusLabel, gap, nowPlayingLabel, skipButton, stopButton);
+        toolbar.getStyleClass().add("app-header");
         toolbar.setAlignment(Pos.CENTER_LEFT);
-        toolbar.setPadding(new Insets(8));
 
         // Tabs. setClosable(false) hides the little "x" on each tab.
         channelsPane = new ChannelsPane(channelRepository, channelService, videoCache, this::rebuildFeeds);
@@ -130,7 +153,9 @@ public class YouTubeHubApp extends Application {
         root.setCenter(tabs);
 
         stage.setTitle("YouTubeHub");
-        stage.setScene(new Scene(root, 1000, 700));
+        Scene scene = new Scene(root, 1150, 760);
+        Theme.apply(scene); // dark theme from app.css
+        stage.setScene(scene);
         stage.show();
 
         // Refresh now, then again every hour for as long as the app is open.
@@ -212,6 +237,7 @@ public class YouTubeHubApp extends Application {
     // Rows with thumbnails, double-click to open, right-click menu.
     private void setUpVideoList(ListView<Video> list) {
         list.setCellFactory(view -> new VideoListCell(watchedIds));
+        list.setPlaceholder(new Label("Nothing here yet. Add channels in the Channels tab, then Refresh."));
 
         // Double-click: play this video, then carry on down the list (each one gets marked watched)
         list.setOnMouseClicked(event -> {
@@ -333,6 +359,7 @@ public class YouTubeHubApp extends Application {
     // A popup with the error message, so problems don't just disappear silently.
     private static void showError(String title, Exception e) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
+        Theme.apply(alert);
         alert.setTitle(title);
         alert.setHeaderText(title);
         alert.setContentText(e.getMessage());
