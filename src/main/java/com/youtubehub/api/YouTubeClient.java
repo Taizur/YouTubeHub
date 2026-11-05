@@ -71,8 +71,20 @@ public class YouTubeClient {
                 snippet.path("title").asText(),
                 snippet.path("channelId").asText(),
                 snippet.path("channelTitle").asText(),
-                snippet.path("publishedAt").asText()
+                snippet.path("publishedAt").asText(),
+                thumbnailUrl(snippet)
         );
+    }
+
+    // snippet.thumbnails has several sizes: default (120x90), medium (320x180), high, ...
+    // Use medium; fall back to default if medium is missing.
+    private static String thumbnailUrl(JsonNode snippet) {
+        JsonNode thumbnails = snippet.path("thumbnails");
+        String url = thumbnails.path("medium").path("url").asText("");
+        if (url.isEmpty()) {
+            url = thumbnails.path("default").path("url").asText("");
+        }
+        return url;
     }
 
     // Looks up a channel's name and uploads playlist in one request (costs 1 quota unit).
@@ -165,7 +177,8 @@ public class YouTubeClient {
                     snippet.path("title").asText(),
                     snippet.path("channelId").asText(),
                     snippet.path("channelTitle").asText(),
-                    contentDetails.path("videoPublishedAt").asText()
+                    contentDetails.path("videoPublishedAt").asText(),
+                    thumbnailUrl(snippet)
             ));
         }
 

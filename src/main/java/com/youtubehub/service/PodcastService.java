@@ -1,32 +1,31 @@
 package com.youtubehub.service;
 
-import com.youtubehub.api.YouTubeClient;
 import com.youtubehub.model.Channel;
 import com.youtubehub.model.Video;
 import com.youtubehub.storage.ChannelRepository;
 import com.youtubehub.storage.WatchedRepository;
 
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
+// Builds the podcast feed from videos already in the VideoCache (no API calls here).
 public class PodcastService {
     private final ChannelRepository channelRepository;
     private final WatchedRepository watchedRepository;
-    private final YouTubeClient client;
+    private final VideoCache videoCache;
 
-    public PodcastService(ChannelRepository channelRepository, WatchedRepository watchedRepository, YouTubeClient client) {
+    public PodcastService(ChannelRepository channelRepository, WatchedRepository watchedRepository, VideoCache videoCache) {
         this.channelRepository = channelRepository;
         this.watchedRepository = watchedRepository;
-        this.client = client;
+        this.videoCache = videoCache;
     }
 
-    // videosPerChannel = how many recent episodes to grab from each podcast channel
+    // videosPerChannel = how many recent episodes to show from each podcast channel
     // hideWatched = skip episodes you've already watched (the channel still fills up to videosPerChannel)
-    public List<Video> getPodcastFeed(int videosPerChannel, boolean hideWatched) throws SQLException, IOException, InterruptedException {
+    public List<Video> getPodcastFeed(int videosPerChannel, boolean hideWatched) throws SQLException {
         List<Channel> channels = channelRepository.getAllChannels();
         Set<String> watchedIds = watchedRepository.getWatchedIds();
 
@@ -38,8 +37,7 @@ public class PodcastService {
                 continue;
             }
 
-            // Ask for the full batch (50), then pick the newest ones you haven't watched
-            List<Video> recent = client.getVideosFromPlaylist(channel.getUploadsPlaylistId(), 50);
+            List<Video> recent = videoCache.getVideos(channel.getChannelId());
             podcasts.addAll(FeedFilter.newest(recent, videosPerChannel, hideWatched, watchedIds));
         }
 
