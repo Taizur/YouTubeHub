@@ -52,7 +52,7 @@ public class Player {
         if (queue == null) {
             return;
         }
-        if (queue.advance()) {
+        if (advanceToNextUnwatched()) {
             load(queue.current());
         } else {
             stop();
@@ -100,6 +100,20 @@ public class Player {
 
     public synchronized boolean isPlaying() {
         return queue != null;
+    }
+
+    // Moves the queue forward, skipping feed videos that got marked watched after the queue was made
+    // (e.g. you right-clicked "Mark watched" while something else was playing). The queue is a copy of
+    // the feed from when you pressed play, so without this it would still play them.
+    // Music queues never skip anything (songs don't use watched).
+    // Returns false when there's nothing left to play.
+    private boolean advanceToNextUnwatched() throws Exception {
+        while (queue.advance()) {
+            if (!queue.marksWatched() || !watchedRepository.isWatched(queue.current().getVideoId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Shows a video: in the player tab if there is one, otherwise in a new Opera tab.
@@ -172,7 +186,7 @@ public class Player {
                 || videoId == null || !videoId.equals(queue.current().getVideoId())) {
             return "";
         }
-        if (!queue.advance()) {
+        if (!advanceToNextUnwatched()) {
             stop(); // that was the last one
             return "";
         }
