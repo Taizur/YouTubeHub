@@ -20,7 +20,8 @@ public class PodcastService {
         this.client = client;
     }
 
-    public List<Video> getPodcastFeed() throws SQLException, IOException, InterruptedException {
+    // videosPerChannel = how many recent episodes to grab from each podcast channel
+    public List<Video> getPodcastFeed(int videosPerChannel) throws SQLException, IOException, InterruptedException {
         List<Channel> channels = channelRepository.getAllChannels();
 
         List<Video> podcasts = new ArrayList<>();
@@ -31,7 +32,7 @@ public class PodcastService {
                 continue;
             }
 
-            List<Video> channelVideos = client.getVideosFromPlaylist(channel.getUploadsPlaylistId());
+            List<Video> channelVideos = client.getVideosFromPlaylist(channel.getUploadsPlaylistId(), videosPerChannel);
             podcasts.addAll(channelVideos);
         }
 

@@ -1,6 +1,7 @@
 package com.youtubehub.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.youtubehub.model.Channel;
 import com.youtubehub.model.Video;
 
 
@@ -68,6 +69,28 @@ public class YouTubeClient {
         );
     }
 
+    // Looks up a channel's name and uploads playlist in one request (costs 1 quota unit).
+    // Returns a Channel with default settings (priority 0, not a podcast), or null if no channel has that ID.
+    // The caller decides the real priority/podcast values and sets them afterward.
+    public Channel getChannel(String channelId) throws IOException, InterruptedException {
+        String json = get("/channels?part=snippet,contentDetails&id=" + channelId);
+        JsonNode root = mapper.readTree(json);
+
+        JsonNode items = root.path("items");
+        if (items.isEmpty()) {
+            return null; // no channel with that ID
+        }
+
+        JsonNode item = items.get(0);
+        return new Channel(
+                item.path("id").asText(),
+                item.path("snippet").path("title").asText(),
+                item.path("contentDetails").path("relatedPlaylists").path("uploads").asText(),
+                0,
+                false
+        );
+    }
+
     public String getUploadsPlaylistId(String channelId) throws IOException, InterruptedException {
         String json = get("/channels?part=contentDetails&id=" + channelId);
         JsonNode root = mapper.readTree(json);
@@ -81,21 +104,24 @@ public class YouTubeClient {
 
     }
 
-    public String getPlaylistItemsJson(String playlistId) throws IOException, InterruptedException {
-        return get("/playlistItems?part=snippet,contentDetails&playlistId=" + playlistId + "&maxResults=3");
+    // maxResults = how many of the newest videos to fetch. YouTube only allows 1 to 50 per request,
+    // so anything outside that range gets pulled back inside it.
+    public String getPlaylistItemsJson(String playlistId, int maxResults) throws IOException, InterruptedException {
+        int safeMax = Math.max(1, Math.min(50, maxResults));
+        return get("/playlistItems?part=snippet,contentDetails&playlistId=" + playlistId + "&maxResults=" + safeMax);
     }
 
-    public List<Video> getRecentUploads(String channelId) throws IOException, InterruptedException {
+    public List<Video> getRecentUploads(String channelId, int maxResults) throws IOException, InterruptedException {
         String playlistId = getUploadsPlaylistId(channelId);
         if (playlistId == null) {
             return new ArrayList<>();
         }
 
-        return getVideosFromPlaylist(playlistId);
+        return getVideosFromPlaylist(playlistId, maxResults);
     }
 
-    public List<Video> getVideosFromPlaylist(String playlistId) throws IOException, InterruptedException {
-        String json = getPlaylistItemsJson(playlistId);
+    public List<Video> getVideosFromPlaylist(String playlistId, int maxResults) throws IOException, InterruptedException {
+        String json = getPlaylistItemsJson(playlistId, maxResults);
         JsonNode root = mapper.readTree(json);
         JsonNode items = root.path("items");
 

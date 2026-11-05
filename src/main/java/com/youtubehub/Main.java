@@ -21,7 +21,7 @@ public class Main {
 
             // TEST: build the podcast feed from every saved podcast channel
             PodcastService podcastService = new PodcastService(channelRepository, client);
-            List<Video> feed = podcastService.getPodcastFeed();
+            List<Video> feed = podcastService.getPodcastFeed(5);
 
             System.out.println("Podcast feed (" + feed.size() + " videos):");
             for (Video video : feed) {
