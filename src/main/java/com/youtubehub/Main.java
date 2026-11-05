@@ -13,8 +13,8 @@ public class Main {
 
             YouTubeClient client = new YouTubeClient(appConfig.getApiKey());
             Video testVideo = client.getVideo("d9y30vB88zg");
-            System.out.println(testVideo.getVideoId());
-            System.out.println(testVideo.getVideoTitle());
+            System.out.println(client.getUploadsPlaylistId("UCzQUP1qoWDoEbmsQxvdjxgQ"));
+
         }
         catch (Exception e) {
             System.out.println("Error: " + e.getMessage());

@@ -65,4 +65,17 @@ public class YouTubeClient {
                 snippet.path("publishedAt").asText()
         );
     }
+
+    public String getUploadsPlaylistId(String channelId) throws IOException, InterruptedException {
+        String json = get("/channels?part=contentDetails&id=" + channelId);
+        JsonNode root = mapper.readTree(json);
+
+        JsonNode items = root.path("items");
+        if (items.isEmpty()) {
+            return null;
+        }
+        JsonNode item = items.get(0);
+        return item.path("contentDetails").path("relatedPlaylists").path("uploads").asText();
+
+    }
 }
