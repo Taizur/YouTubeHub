@@ -101,4 +101,36 @@ async function handle(answer) {
   }
 }
 
+// After you use the right-click menu, background.js sends the app's answer here ("Added ...")
+// and this shows it in a small box at the bottom of the page for a few seconds.
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "toast") {
+    showToast(message.text);
+    sendResponse(true); // "got it", so background.js knows the box was shown
+  }
+});
+
+function showToast(text) {
+  const box = document.createElement("div");
+  box.textContent = text;
+  Object.assign(box.style, {
+    position: "fixed",
+    bottom: "28px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    maxWidth: "520px",
+    background: "#222229",
+    color: "#ececf1",
+    border: "1px solid #2e2e38",
+    borderLeft: "4px solid #ff4757",
+    borderRadius: "10px",
+    padding: "10px 16px",
+    font: "14px 'Segoe UI', Roboto, sans-serif",
+    boxShadow: "0 8px 28px rgba(0, 0, 0, 0.5)",
+    zIndex: "2147483647", // on top of everything YouTube draws
+  });
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 4000);
+}
+
 start();

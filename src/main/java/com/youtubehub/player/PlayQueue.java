@@ -52,6 +52,15 @@ public class PlayQueue {
         return true;
     }
 
+    // Moves back one video. Returns false if already at the first one.
+    public boolean back() {
+        if (index == 0) {
+            return false;
+        }
+        index--;
+        return true;
+    }
+
     public int position() {
         return index + 1; // 1-based, for "3 of 12"
     }

@@ -59,6 +59,19 @@ public class Player {
         }
     }
 
+    // Goes back one video. Does nothing on the first video (the UI greys the button out there).
+    public synchronized void previous() throws Exception {
+        if (queue == null || !queue.back()) {
+            return;
+        }
+        load(queue.current());
+    }
+
+    // True when there's a video before the current one (the UI greys out Previous otherwise)
+    public synchronized boolean hasPrevious() {
+        return queue != null && queue.position() > 1;
+    }
+
     public synchronized void stop() {
         queue = null;
         pendingVideoId = null;

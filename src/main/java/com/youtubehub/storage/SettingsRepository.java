@@ -17,6 +17,7 @@ import java.util.Map;
 //   podcasts_per_channel        5
 //   subscriptions_per_channel   3
 //   hours_per_priority_point    24
+//   max_age_days                0
 //
 // A setting that was never saved (e.g. the first time the app runs) uses its default.
 public class SettingsRepository {
@@ -25,6 +26,7 @@ public class SettingsRepository {
     private static final String PODCASTS_PER_CHANNEL = "podcasts_per_channel";
     private static final String SUBSCRIPTIONS_PER_CHANNEL = "subscriptions_per_channel";
     private static final String HOURS_PER_PRIORITY_POINT = "hours_per_priority_point";
+    private static final String MAX_AGE_DAYS = "max_age_days";
 
     private Connection connect() throws SQLException {
         return DriverManager.getConnection(DATABASE_URL);
@@ -59,7 +61,8 @@ public class SettingsRepository {
         return new Settings(
                 readInt(saved, PODCASTS_PER_CHANNEL, defaults.podcastsPerChannel()),
                 readInt(saved, SUBSCRIPTIONS_PER_CHANNEL, defaults.subscriptionsPerChannel()),
-                readInt(saved, HOURS_PER_PRIORITY_POINT, defaults.hoursPerPriorityPoint()));
+                readInt(saved, HOURS_PER_PRIORITY_POINT, defaults.hoursPerPriorityPoint()),
+                readInt(saved, MAX_AGE_DAYS, defaults.maxAgeDays()));
     }
 
     public void save(Settings settings) throws SQLException {
@@ -74,6 +77,7 @@ public class SettingsRepository {
             put(statement, PODCASTS_PER_CHANNEL, settings.podcastsPerChannel());
             put(statement, SUBSCRIPTIONS_PER_CHANNEL, settings.subscriptionsPerChannel());
             put(statement, HOURS_PER_PRIORITY_POINT, settings.hoursPerPriorityPoint());
+            put(statement, MAX_AGE_DAYS, settings.maxAgeDays());
         }
     }
 

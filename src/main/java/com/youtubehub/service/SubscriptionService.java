@@ -49,7 +49,8 @@ public class SubscriptionService {
 
     // Builds the feed from videos already in the VideoCache (no API calls here).
     // hideWatched = skip videos you've already watched (each channel still fills up to videosPerChannel)
-    public List<ScoredVideo> getSubscriptionFeed(int videosPerChannel, boolean hideWatched) throws SQLException {
+    // maxAgeDays = leave out videos older than this many days (0 = no limit)
+    public List<ScoredVideo> getSubscriptionFeed(int videosPerChannel, boolean hideWatched, int maxAgeDays) throws SQLException {
         List<Channel> channels = channelRepository.getAllChannels();
         Set<String> watchedIds = watchedRepository.getWatchedIds();
         List<ScoredVideo> feed = new ArrayList<>();
@@ -61,7 +62,7 @@ public class SubscriptionService {
             }
 
             List<Video> recent = videoCache.getVideos(channel.getChannelId());
-            List<Video> channelVideos = FeedFilter.newest(recent, videosPerChannel, hideWatched, watchedIds);
+            List<Video> channelVideos = FeedFilter.newest(recent, videosPerChannel, hideWatched, watchedIds, maxAgeDays);
             for (Video video : channelVideos) {
                 Instant published = video.getPublishedInstant();
                 if (published == null) {

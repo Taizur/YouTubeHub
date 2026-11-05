@@ -27,6 +27,7 @@ public class SettingsPane extends ScrollPane {
     private final Spinner<Integer> podcastsPerChannel = new Spinner<>(1, 20, 5);
     private final Spinner<Integer> subscriptionsPerChannel = new Spinner<>(1, 20, 3);
     private final Spinner<Integer> hoursPerPriorityPoint = new Spinner<>(0, 168, 24, 6); // steps of 6 hours
+    private final Spinner<Integer> maxAgeDays = new Spinner<>(0, 365, 0, 7); // steps of a week
     private final Label weightingExample = new Label();
     private final Label message = new Label();
 
@@ -44,6 +45,10 @@ public class SettingsPane extends ScrollPane {
                 settingRow("Videos per subscription channel",
                         "How many recent videos each other channel adds to the Subscriptions tab.",
                         subscriptionsPerChannel),
+                settingRow("Hide videos older than (days)",
+                        "Leaves anything older than this out of Podcasts and Subscriptions, even if a channel "
+                                + "hasn't posted enough newer ones. 0 = no limit.",
+                        maxAgeDays),
                 settingRow("Tier weighting (hours per tier step)",
                         "How much a channel's tier beats newness in Subscriptions. Each step up "
                                 + "(Desperate → Good filler → High → Favorite) makes that channel's videos rank "
@@ -73,7 +78,7 @@ public class SettingsPane extends ScrollPane {
         setFitToWidth(true); // the content is as wide as the tab, so nothing scrolls sideways
 
         // Spinners you can type into, with the example sentence kept up to date
-        for (Spinner<Integer> spinner : java.util.List.of(podcastsPerChannel, subscriptionsPerChannel, hoursPerPriorityPoint)) {
+        for (Spinner<Integer> spinner : java.util.List.of(podcastsPerChannel, subscriptionsPerChannel, maxAgeDays, hoursPerPriorityPoint)) {
             spinner.setEditable(true);
             spinner.setPrefWidth(100);
             spinner.setMinWidth(100); // don't let long explanation text squash it
@@ -105,6 +110,7 @@ public class SettingsPane extends ScrollPane {
         podcastsPerChannel.getValueFactory().setValue(settings.podcastsPerChannel());
         subscriptionsPerChannel.getValueFactory().setValue(settings.subscriptionsPerChannel());
         hoursPerPriorityPoint.getValueFactory().setValue(settings.hoursPerPriorityPoint());
+        maxAgeDays.getValueFactory().setValue(settings.maxAgeDays());
         updateExample();
     }
 
@@ -124,7 +130,8 @@ public class SettingsPane extends ScrollPane {
         Settings settings = new Settings(
                 commit(podcastsPerChannel),
                 commit(subscriptionsPerChannel),
-                commit(hoursPerPriorityPoint));
+                commit(hoursPerPriorityPoint),
+                commit(maxAgeDays));
         try {
             settingsRepository.save(settings);
             onSaved.accept(settings);

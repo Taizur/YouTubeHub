@@ -25,7 +25,8 @@ public class PodcastService {
 
     // videosPerChannel = how many recent episodes to show from each podcast channel
     // hideWatched = skip episodes you've already watched (the channel still fills up to videosPerChannel)
-    public List<Video> getPodcastFeed(int videosPerChannel, boolean hideWatched) throws SQLException {
+    // maxAgeDays = leave out episodes older than this many days (0 = no limit)
+    public List<Video> getPodcastFeed(int videosPerChannel, boolean hideWatched, int maxAgeDays) throws SQLException {
         List<Channel> channels = channelRepository.getAllChannels();
         Set<String> watchedIds = watchedRepository.getWatchedIds();
 
@@ -38,7 +39,7 @@ public class PodcastService {
             }
 
             List<Video> recent = videoCache.getVideos(channel.getChannelId());
-            podcasts.addAll(FeedFilter.newest(recent, videosPerChannel, hideWatched, watchedIds));
+            podcasts.addAll(FeedFilter.newest(recent, videosPerChannel, hideWatched, watchedIds, maxAgeDays));
         }
 
         // Newest first

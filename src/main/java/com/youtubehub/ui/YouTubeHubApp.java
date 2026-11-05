@@ -37,6 +37,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -88,6 +89,7 @@ public class YouTubeHubApp extends Application {
     private final Button refreshButton = new Button("Refresh");
     private final CheckBox showWatched = new CheckBox("Show watched");
     private final Label statusLabel = new Label();
+    private final Button previousButton = new Button("Previous");
     private final Button skipButton = new Button("Skip");
     private final Button stopButton = new Button("Stop");
     private final Label nowPlayingLabel = new Label();
@@ -107,6 +109,8 @@ public class YouTubeHubApp extends Application {
         // Toolbar along the top
         refreshButton.setOnAction(event -> refreshFromYouTube());
         showWatched.setOnAction(event -> rebuildFeeds()); // toggling only re-filters, no API call
+        previousButton.setOnAction(event -> previous());
+        previousButton.setDisable(true);
         skipButton.setOnAction(event -> skip());
         stopButton.setOnAction(event -> player.stop());
         skipButton.setDisable(true);
@@ -132,7 +136,7 @@ public class YouTubeHubApp extends Application {
         Region gap = new Region(); // empty space that stretches, pushing the player controls to the right
         HBox.setHgrow(gap, Priority.ALWAYS);
 
-        HBox toolbar = new HBox(10, brand, refreshButton, showWatched, statusLabel, gap, nowPlayingLabel, skipButton, stopButton);
+        HBox toolbar = new HBox(10, brand, refreshButton, showWatched, statusLabel, gap, nowPlayingLabel, previousButton, skipButton, stopButton);
         toolbar.getStyleClass().add("app-header");
         toolbar.setAlignment(Pos.CENTER_LEFT);
 
@@ -156,6 +160,10 @@ public class YouTubeHubApp extends Application {
         root.setCenter(tabs);
 
         stage.setTitle("YouTubeHub");
+        // Window / taskbar icon (same picture as the Opera extension). Windows picks the size it needs.
+        stage.getIcons().addAll(
+                new Image(YouTubeHubApp.class.getResource("icon32.png").toExternalForm()),
+                new Image(YouTubeHubApp.class.getResource("icon128.png").toExternalForm()));
         Scene scene = new Scene(root, 1150, 760);
         Theme.apply(scene); // dark theme from app.css
         stage.setScene(scene);
@@ -227,6 +235,7 @@ public class YouTubeHubApp extends Application {
     // Now-playing text, Skip/Stop buttons, and the watched marks (feed videos get marked as they load).
     private void playerChanged() {
         nowPlayingLabel.setText(player.getStatusText());
+        previousButton.setDisable(!player.hasPrevious());
         skipButton.setDisable(!player.isPlaying());
         stopButton.setDisable(!player.isPlaying());
         rebuildFeeds();
@@ -238,6 +247,14 @@ public class YouTubeHubApp extends Application {
         settings = newSettings;
         subscriptionService.setHoursPerPriorityPoint(newSettings.hoursPerPriorityPoint());
         rebuildFeeds();
+    }
+
+    private void previous() {
+        try {
+            player.previous();
+        } catch (Exception e) {
+            showError("Couldn't go back", e);
+        }
     }
 
     private void skip() {
@@ -354,10 +371,10 @@ public class YouTubeHubApp extends Application {
             watchedIds.addAll(watchedRepository.getWatchedIds());
 
             boolean hideWatched = !showWatched.isSelected();
-            List<Video> podcasts = podcastService.getPodcastFeed(settings.podcastsPerChannel(), hideWatched);
+            List<Video> podcasts = podcastService.getPodcastFeed(settings.podcastsPerChannel(), hideWatched, settings.maxAgeDays());
 
             List<Video> subscriptions = new ArrayList<>();
-            for (ScoredVideo scored : subscriptionService.getSubscriptionFeed(settings.subscriptionsPerChannel(), hideWatched)) {
+            for (ScoredVideo scored : subscriptionService.getSubscriptionFeed(settings.subscriptionsPerChannel(), hideWatched, settings.maxAgeDays())) {
                 subscriptions.add(scored.video()); // already in ranked order
             }
 
